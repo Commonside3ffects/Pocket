@@ -259,6 +259,12 @@ textarea.in{resize:vertical;min-height:64px;font-family:var(--mono);font-size:12
 .check{display:inline-flex;align-items:center;gap:6px;color:var(--fg2);cursor:pointer}
 .check input{accent-color:var(--accent);width:15px;height:15px}
 
+.subchips{display:flex;flex-wrap:wrap;gap:6px}
+.subchip{display:inline-flex;align-items:center;gap:7px;padding:3px 10px;border:1px solid var(--line2);border-radius:14px;font-size:13px;min-height:28px}
+.subchip b{font-weight:500;color:var(--fg2)}
+.subchip:hover{background:var(--hover)}
+.subchip.on{background:var(--accent-soft);border-color:var(--accent)}
+.subchip.on b{color:var(--fg)}
 /* budgets */
 .buds{border-top:1px solid var(--line)}
 .bud{display:grid;grid-template-columns:minmax(0,1.2fr) minmax(0,1fr) 232px 128px;gap:6px 14px;align-items:center;padding:9px 6px;border-bottom:1px solid var(--line)}
@@ -969,7 +975,7 @@ function vOverview() {
   <section class="stats" aria-label="Month summary">
     <div class="stat"><label>Income</label><b class="num">${fmt(s.income)}</b><small>${s.n} ${s.n === 1 ? 'transaction' : 'transactions'} logged</small></div>
     <div class="stat"><label>Expenses</label><b class="num">${fmt(s.expenses)}</b><small>Needs + wants</small></div>
-    <div class="stat"><label>Net savings</label><b class="num ${s.net < 0 ? 'neg' : ''}">${fmt(s.net)}</b><small>${fmt(s.savings)} put to savings &amp; debt</small></div>
+    <div class="stat"><label>Left this month</label><b class="num ${s.cash < 0 ? 'neg' : ''}">${fmt(s.cash)}</b><small>${s.cardDelta > 0 ? `${fmt(s.cardDelta)} on cards still to pay` : 'After spending, savings and debt payments'}</small></div>
     <div class="stat"><label>Savings rate</label><b class="num ${s.rate !== null && s.rate < 0 ? 'neg' : ''}">${s.rate === null ? '—' : Math.round(s.rate) + '%'}</b><small>${s.rate === null ? 'Log income to see this' : s.rate >= 20 ? 'At or above the 20% target' : 'Target is 20%'}</small></div>
   </section>
   <section class="sec"><div class="sec-h"><h2>Quick log</h2><button class="btn txt" data-a="openPresets">Edit presets</button></div>
@@ -1192,17 +1198,30 @@ function mTx() {
 function detailList() {
   const q = (modal.q || '').trim().toLowerCase();
   let list = monthTx(ui.month).filter(t => t.type !== 'income' && t.type !== 'advance' && (modal.kind === 'main' ? mainOf(subOf(t.subId)).id === modal.id : txBucket(t) === modal.id));
-  const item = breakdown(ui.month, modal.kind === 'main' ? 'main' : 'bucket').find(x => x.id === modal.id), total = item ? item.amt : 0, raw = sum(list, t => t.amount);
+  const item = breakdown(ui.month, modal.kind === 'main' ? 'main' : 'bucket').find(x => x.id === modal.id), all = sum(list, t => t.amount);
+  if (modal.sub) list = list.filter(t => t.subId === modal.sub);
+  const raw = sum(list, t => t.amount), total = modal.sub ? raw : item ? item.amt : 0;
   if (q) list = list.filter(t => [t.desc, t.notes, subOf(t.subId).name, t.mode].join(' ').toLowerCase().includes(q));
   return `<div class="tx-foot num" style="padding-inline:0"><span>${list.length} ${list.length === 1 ? 'transaction' : 'transactions'}${q ? ' found' : ''}</span><span>Total ${fmt(total)}</span></div>
-  ${raw - total > 0.5 ? '<p class="small muted" style="padding-bottom:8px">Card payments count here only beyond what went onto cards this month, so card spending is not counted twice.</p>' : ''}
+  ${!modal.sub && all - total > 0.5 ? '<p class="small muted" style="padding-bottom:8px">Card payments count here only beyond what went onto cards this month, so card spending is not counted twice.</p>' : ''}
   ${list.length ? `<div class="txs">${list.sort(byNewest).map(txRow).join('')}</div>` : `<div class="empty">${q ? 'Nothing matches that search.' : 'Nothing logged here this month.'}</div>`}`;
+}
+// Subcategory totals inside a category: tap one to narrow the list and the total to it.
+function detailSubs() {
+  if (modal.kind !== 'main') return '';
+  const by = new Map(); let n = 0;
+  for (const t of monthTx(ui.month)) if (t.type !== 'income' && t.type !== 'advance' && mainOf(subOf(t.subId)).id === modal.id) { by.set(t.subId, (by.get(t.subId) || 0) + t.amount); n += t.amount; }
+  if (!by.size) return '';
+  if (modal.sub && !by.has(modal.sub)) modal.sub = null;
+  const chip = (v, label, amt) => `<button class="subchip${(modal.sub || '') === v ? ' on' : ''}" data-a="detailSub" data-v="${esc(v)}" aria-pressed="${(modal.sub || '') === v}">${esc(label)}<b class="num">${fmt(amt)}</b></button>`;
+  return `<div class="subchips" aria-label="Subcategories">${by.size > 1 ? chip('', 'All', n) : ''}${[...by].sort((a, b) => b[1] - a[1]).map(([id, a]) => chip(id || '', subOf(id).name, a)).join('')}</div>`;
 }
 function mDetail() {
   const isMain = modal.kind === 'main', m = isMain ? (mainMap.get(modal.id) || UNMAIN) : null, b = isMain ? null : BUCKETS[modal.id];
   return `${mHead(esc(isMain ? m.name : b.label) + ` <span class="muted" style="font-weight:400">· ${monthLabel(ui.month)}</span>`, isMain ? m.icon : '')}
   <div class="modal-b">
     <div class="tools"><div class="search">${I.search}<input class="in" id="d-q" type="search" placeholder="Search these transactions" value="${esc(modal.q || '')}" data-i="detailQ" aria-label="Search"></div><button class="btn pri" data-a="detailAdd">${I.plus} Add</button></div>
+    ${detailSubs()}
     <div id="d-list">${detailList()}</div>
   </div>`;
 }
@@ -1390,8 +1409,9 @@ const A = {
     state.tx.push(t); commit(); toast(`Logged ${p.label} · ${fmt(p.amount)}${ui.month !== curMonth() ? ' for today' : ''}`, () => { state.tx = state.tx.filter(x => x.id !== t.id); });
   },
   detail(el) { open({type: 'detail', kind: el.dataset.kind, id: el.dataset.id, q: ''}); },
+  detailSub(el) { modal.sub = el.dataset.v || null; renderModal(true); },
   detailAdd() {
-    const sub = modal.kind === 'main' ? state.subs.find(s => s.mainId === modal.id && !s.sys) : state.subs.find(s => s.bucket === modal.id && !s.sys);
+    const sub = modal.sub && subMap.get(modal.sub) && !subMap.get(modal.sub).sys ? subMap.get(modal.sub) : modal.kind === 'main' ? state.subs.find(s => s.mainId === modal.id && !s.sys) : state.subs.find(s => s.bucket === modal.id && !s.sys);
     open({type: 'tx', draft: newDraft(sub ? {subId: sub.id} : {}), back: modal});
   },
 
