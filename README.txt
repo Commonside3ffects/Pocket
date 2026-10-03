@@ -11,6 +11,7 @@ To use it
 
 Good to know
 - Data is stored in that browser on that device only. Nothing is uploaded.
-- To move data between devices, use Export backup on one and Restore from backup on the other.
+- To keep devices identical, open Settings & backup and set up Sync across devices (a private GitHub
+  repository plus an access token). Without it, use Export backup on one device and Restore on the other.
 - After uploading a changed index.html, bump VERSION in sw.js so installed copies refresh.
 - Opening index.html straight from disk works as a normal page, but install and offline need HTTPS hosting.
