@@ -163,7 +163,7 @@ textarea.in{resize:vertical;min-height:64px;font-family:var(--mono);font-size:12
 .menu-list.grid button{width:38px;height:38px;border-radius:4px;font-size:19px;display:inline-flex;align-items:center;justify-content:center}
 .menu-list.grid button:hover{background:var(--hover)}
 .menu-list.grid button.on{box-shadow:inset 0 0 0 2px var(--accent)}
-.seg{display:inline-flex;background:var(--hover);border-radius:6px;padding:2px;gap:2px;max-width:100%}
+.seg{overflow-x:auto;scrollbar-width:none;display:inline-flex;background:var(--hover);border-radius:6px;padding:2px;gap:2px;max-width:100%}
 .seg button{padding:3px 10px;border-radius:4px;color:var(--fg2);font-weight:500;min-height:26px;white-space:nowrap}
 .seg button.on{background:var(--bg);color:var(--fg);box-shadow:0 0 0 1px var(--line2)}
 .views{display:flex;gap:2px;border-bottom:1px solid var(--line);overflow-x:auto;scrollbar-width:none}
@@ -236,6 +236,7 @@ textarea.in{resize:vertical;min-height:64px;font-family:var(--mono);font-size:12
 .tx{display:grid;grid-template-columns:62px minmax(0,1fr) minmax(0,170px) 92px minmax(96px,auto) 28px;gap:4px 10px;align-items:center;padding:6px 6px;border-bottom:1px solid var(--line);cursor:pointer;min-height:40px}
 .tx:hover{background:var(--hover)}
 .tx-date,.tx-mode{color:var(--fg2);font-size:12.5px;white-space:nowrap}
+.tx-mode{overflow:hidden;text-overflow:ellipsis}
 .tx-desc{display:flex;gap:8px;align-items:baseline;min-width:0}
 .tx-desc .ic{flex:none}
 .tx-desc .t{font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
@@ -292,6 +293,24 @@ textarea.in{resize:vertical;min-height:64px;font-family:var(--mono);font-size:12
 .cmp b{font-weight:600}
 .cmp .big{font-size:18px;font-weight:600}
 
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,300px),1fr));gap:14px}
+.ccard{border:1px solid var(--line);border-radius:6px;padding:14px;display:flex;flex-direction:column;gap:12px;min-width:0}
+.ccard-h{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.ccard-h b{font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ccard-bal{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;margin-bottom:8px}
+.ccard-bal b{font-size:22px;font-weight:600}
+.util{position:relative;margin-bottom:6px}
+.util .bar{height:8px;border-radius:4px}
+.util .tick{position:absolute;left:30%;top:-3px;bottom:-3px;width:2px;background:var(--fg2);border-radius:1px}
+.mini{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.mini div{display:flex;flex-direction:column;min-width:0}
+.mini small{color:var(--fg2);font-size:12px}
+.mini b{font-weight:600;overflow-wrap:anywhere}
+.ccard-tx{display:flex;flex-direction:column}
+.ccard-tx .r{display:grid;grid-template-columns:50px minmax(0,1fr) auto;gap:8px;padding:6px 2px;border-top:1px solid var(--line);font-size:13px;width:100%;border-radius:0}
+.ccard-tx .r:hover{background:var(--hover)}
+.ccard-tx .t{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.debt .nm small{display:block;font-size:12px;margin-top:3px}
 /* guide (serif document) */
 .doc{font-family:var(--serif);font-size:16.5px;line-height:1.65;max-width:68ch;display:flex;flex-direction:column;gap:16px}
 .doc h2{font-family:var(--font);font-size:22px;font-weight:600;line-height:1.3;padding-top:14px}
@@ -423,7 +442,7 @@ textarea.in{resize:vertical;min-height:64px;font-family:var(--mono);font-size:12
 const KEY = 'paisa-ledger-v1'; // kept from the app's first name so saved data carries over
 const COLORS = ['gray','brown','orange','yellow','green','blue','purple','pink','red'];
 const EMOJI = ['💰','🏠','🍽️','🚇','🩺','🛍️','🎬','🍻','👪','🏦','☕','🛒','🚕','🍱','⛽','💡','📶','📱','🎓','✈️','🎁','🐶','👶','💊','🏋️','📚','🎮','💇','🧾','🔧','🚗','🏥','🎵','🍕','💳','🪙','📈','🧺','🚬','🎟️','📁','🚌'];
-const MODES = ['UPI','Card','Cash','Net Banking','Wallet'];
+const MODES = ['UPI','Debit Card','Cash','Net Banking','Wallet'];
 const BUCKETS = {
   needs:{label:'Needs',pct:50,color:'blue',hint:'Rent, bills, groceries, commute, family support'},
   wants:{label:'Wants',pct:30,color:'yellow',hint:'Dining out, shopping, nights out, leisure'},
@@ -558,7 +577,7 @@ const SKEY = KEY + ':sync', SYNC_FILE = 'pocket-data.json';
 let sync = null, shadow = null, lastDel = {}, rev = 0, syncTimer = null;
 const syncState = {busy: false, err: '', dirty: false};
 const ui = {view: 'overview', month: curMonth(), breakdown: 'main', txq: '', txType: 'all', txCat: '', txAll: false, bud: 'all', closed: new Set()};
-let subMap, mainMap, paidMap;
+let subMap, mainMap, paidMap, chargeMap;
 const UNSUB = {id: null, mainId: 'none', name: 'Uncategorized', bucket: 'wants'};
 const UNMAIN = {id: 'none', name: 'Uncategorized', icon: '📄', color: 'gray', type: 'expense'};
 
@@ -588,14 +607,17 @@ function withSample() {
     s.tx.push({id: 'x' + (++n), type, date, subId, amount, desc, mode, notes: '', ts: n, ...extra});
   };
   [-2, -1, 0].forEach((off, i) => {
-    const k = [1.06, 0.95, 1][i], r = v => Math.round(v * k / 10) * 10, e = (day, sub, amt, desc, mode = 'UPI') => add(off, day, 'expense', sub, r(amt), desc, mode);
+    const k = [1.06, 0.95, 1][i], r = v => Math.round(v * k / 10) * 10, e = (day, sub, amt, desc, mode = 'UPI') => add(off, day, 'expense', sub, r(amt), desc, mode === 'Card' ? 'Credit Card' : mode, mode === 'Card' ? {cardId: 'd-card'} : undefined);
     add(off, 1, 'income', 's-salary', 85000, 'Salary credit', 'Net Banking');
     add(off, 18, 'income', 's-freelance', r(12000), 'Freelance invoice', 'Net Banking');
     add(off, 3, 'expense', 's-rent', 22000, 'Rent', 'Net Banking');
     add(off, 5, 'expense', 's-home', 8000, 'Sent to parents', 'UPI');
     add(off, 7, 'expense', 's-sip', 10000, 'Index fund SIP', 'Net Banking');
     add(off, 10, 'expense', 's-emerg', 3000, 'Emergency fund transfer', 'Net Banking');
-    add(off, 8, 'debt', 's-debt', 5000, 'Payment · Credit card', 'Net Banking', {debtId: 'd-card'});
+    add(off, 8, 'debt', 's-debt', 9000, 'Payment · Rewards card', 'Net Banking', {debtId: 'd-card'});
+    add(off, 9, 'debt', 's-debt', 1500, 'Payment · Travel card', 'Net Banking', {debtId: 'd-card2'});
+    add(off, 26, 'expense', 's-travel', r(3200), 'Train tickets', 'Credit Card', {cardId: 'd-card2'});
+    if (off === -1) add(off, 12, 'advance', null, 5000, 'Cash from Travel card', 'Credit Card', {cardId: 'd-card2'});
     add(off, 8, 'debt', 's-debt', 6200, 'Payment · Personal loan', 'Net Banking', {debtId: 'd-loan'});
     add(off, 8, 'debt', 's-debt', 2000, 'Payment · Phone EMI', 'Net Banking', {debtId: 'd-phone'});
     e(5, 's-util', 2400, 'Electricity bill'); e(5, 's-net', 999, 'Broadband'); e(15, 's-insure', 1800, 'Health cover premium', 'Card');
@@ -612,11 +634,12 @@ function withSample() {
     if (off === -1) e(21, 's-gadgets', 3500, 'Earphones', 'Card');
   });
   s.debts = [
-    {id: 'd-card', name: 'Credit card', kind: 'Credit Card', principal: 63000, apr: 39, min: 3200, limit: 120000},
-    {id: 'd-loan', name: 'Personal loan', kind: 'Personal Loan', principal: 192000, apr: 13.5, min: 6200, limit: 0},
+    {id: 'd-card', name: 'Rewards card', kind: 'Credit Card', principal: 46000, apr: 39, min: 3200, limit: 120000},
+    {id: 'd-card2', name: 'Travel card', kind: 'Credit Card', principal: 14000, apr: 36, min: 1500, limit: 80000},
+    {id: 'd-loan', name: 'Personal loan', kind: 'Personal Loan', principal: 192000, original: 250000, apr: 13.5, min: 6200, limit: 0},
     {id: 'd-phone', name: 'Phone EMI', kind: 'EMI', principal: 28000, apr: 15, min: 2000, limit: 0}
   ];
-  s.budgets = {'s-rent': 22000, 's-util': 3000, 's-net': 1000, 's-groc': 8000, 's-dine': 4000, 's-coffee': 800, 's-metro': 1000, 's-taxi': 1200, 's-fuel': 2000, 's-insure': 1800, 's-clothes': 3000, 's-stream': 700, 's-beer': 2500, 's-night': 2500, 's-smoke': 800, 's-home': 8000, 's-sip': 10000, 's-emerg': 5000, 's-debt': 15000};
+  s.budgets = {'s-rent': 22000, 's-util': 3000, 's-net': 1000, 's-groc': 8000, 's-dine': 4000, 's-coffee': 800, 's-metro': 1000, 's-taxi': 1200, 's-fuel': 2000, 's-insure': 1800, 's-clothes': 3000, 's-stream': 700, 's-beer': 2500, 's-night': 2500, 's-smoke': 800, 's-home': 8000, 's-sip': 10000, 's-emerg': 5000, 's-debt': 20000};
   s.extra = 3000; s.sample = true;
   return s;
 }
@@ -674,22 +697,43 @@ function index() {
   subMap = new Map(state.subs.map(s => [s.id, s]));
   mainMap = new Map(state.mains.map(m => [m.id, m]));
   paidMap = new Map();
-  for (const t of state.tx) if (t.type === 'debt' && t.debtId) paidMap.set(t.debtId, (paidMap.get(t.debtId) || 0) + t.amount);
+  chargeMap = new Map();
+  for (const t of state.tx) {
+    if (t.type === 'debt' && t.debtId) paidMap.set(t.debtId, (paidMap.get(t.debtId) || 0) + t.amount);
+    else if (t.cardId && (t.type === 'expense' || t.type === 'advance')) chargeMap.set(t.cardId, (chargeMap.get(t.cardId) || 0) + t.amount);
+  }
 }
 const subOf = id => subMap.get(id) || UNSUB;
 const mainOf = s => mainMap.get(s.mainId) || UNMAIN;
-const txBucket = t => t.type === 'income' ? 'income' : t.type === 'debt' ? 'savings' : subOf(t.subId).bucket;
+const txBucket = t => t.type === 'income' ? 'income' : t.type === 'advance' ? 'advance' : t.type === 'debt' ? 'savings' : subOf(t.subId).bucket;
+const cards = () => state.debts.filter(d => d.kind === 'Credit Card');
+const cardOf = id => state.debts.find(d => d.id === id && d.kind === 'Credit Card');
 const monthTx = mk => state.tx.filter(t => t.date.startsWith(mk));
 const byNewest = (a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : (b.ts || 0) - (a.ts || 0));
-const debtBal = d => Math.max(0, d.principal - (paidMap.get(d.id) || 0));
+// What is owed now: the opening balance, plus anything charged or withdrawn on a card, less payments.
+const debtBal = d => Math.max(0, d.principal + (chargeMap.get(d.id) || 0) - (paidMap.get(d.id) || 0));
+// Month totals. Spending counts when it happens, whichever way it was paid. A card payment only counts toward
+// the savings & debt share once it exceeds what went onto cards that month, so card spending is not counted twice.
 function summary(mk) {
-  const r = {income: 0, needs: 0, wants: 0, savings: 0, n: 0};
-  for (const t of monthTx(mk)) { const b = txBucket(t); r[b in BUCKETS || b === 'income' ? b : 'wants'] += t.amount; r.n++; }
+  const r = {income: 0, needs: 0, wants: 0, saved: 0, n: 0, adv: 0, cardSpend: 0, cardNew: 0, cardPay: 0, loanPay: 0, cashExp: 0};
+  for (const t of monthTx(mk)) {
+    const a = t.amount; r.n++;
+    if (t.type === 'income') r.income += a;
+    else if (t.type === 'advance') { r.adv += a; if (cardOf(t.cardId)) r.cardNew += a; }
+    else if (t.type === 'debt') { if (cardOf(t.debtId)) r.cardPay += a; else r.loanPay += a; }
+    else {
+      const b = subOf(t.subId).bucket; r[b === 'savings' ? 'saved' : b === 'needs' ? 'needs' : 'wants'] += a;
+      if (t.cardId && cardOf(t.cardId)) { r.cardSpend += a; r.cardNew += a; } else r.cashExp += a;
+    }
+  }
+  r.cardNet = Math.max(0, r.cardPay - r.cardNew);
+  r.savings = r.saved + r.loanPay + r.cardNet;
   r.expenses = r.needs + r.wants; r.out = r.expenses + r.savings; r.net = r.income - r.expenses;
-  r.rate = r.income > 0 ? r.net / r.income * 100 : null; r.left = r.income - r.out;
+  r.rate = r.income > 0 ? r.net / r.income * 100 : null;
+  r.cashIn = r.income + r.adv; r.cashOut = r.cashExp + r.cardPay + r.loanPay; r.cash = r.cashIn - r.cashOut; r.cardDelta = r.cardNew - r.cardPay;
   return r;
 }
-function spentBySub(mk) { const m = {}; for (const t of monthTx(mk)) if (t.type !== 'income') m[t.subId] = (m[t.subId] || 0) + t.amount; return m; }
+function spentBySub(mk) { const m = {}; for (const t of monthTx(mk)) if (t.type !== 'income' && t.type !== 'advance') m[t.subId] = (m[t.subId] || 0) + t.amount; return m; }
 const budgetSubs = () => state.subs.filter(s => s.bucket !== 'income');
 function avgSpend(mk) {
   const m = {}, months = [0, -1, -2].map(n => shiftMonth(mk, n)); let used = 0;
@@ -778,13 +822,13 @@ function monthNav() {
   return `<div class="month"><button class="ib" data-a="month" data-v="-1" aria-label="Previous month">${I.left}</button><b class="num">${monthLabel(ui.month)}</b><button class="ib" data-a="month" data-v="1" aria-label="Next month">${I.right}</button>${ui.month !== curMonth() ? '<button class="btn txt" data-a="month" data-v="0">Back to this month</button>' : ''}</div>`;
 }
 function txRow(t) {
-  const s = subOf(t.subId), m = mainOf(s);
+  const adv = t.type === 'advance', s = subOf(t.subId), m = mainOf(s), card = t.cardId ? cardOf(t.cardId) : null;
   return `<div class="tx" data-a="editTx" data-id="${t.id}" tabindex="0" role="button">
     <span class="tx-date num">${shortDate(t.date)}</span>
-    <span class="tx-desc"><span class="ic">${m.icon}</span><span class="t">${esc(t.desc || s.name)}</span>${t.notes ? `<span class="n">${esc(t.notes)}</span>` : ''}</span>
-    <span class="tx-cat"><span class="tag c-${m.color}">${esc(s.name)}</span></span>
-    <span class="tx-mode">${esc(t.mode || '')}</span>
-    <span class="tx-amt num ${t.type}">${t.type === 'income' ? '+' : '−'}${fmt(t.amount)}</span>
+    <span class="tx-desc"><span class="ic">${adv ? '💳' : m.icon}</span><span class="t">${esc(t.desc || (adv ? 'Cash from ' + (card ? card.name : 'card') : s.name))}</span>${t.notes ? `<span class="n">${esc(t.notes)}</span>` : ''}</span>
+    <span class="tx-cat">${adv ? '<span class="tag c-red">Card cash</span>' : `<span class="tag c-${m.color}">${esc(s.name)}</span>`}</span>
+    <span class="tx-mode">${card ? (adv ? '' : '💳 ') + esc(card.name) : esc(t.mode || '')}</span>
+    <span class="tx-amt num ${t.type}">${t.type === 'income' || adv ? '+' : '−'}${fmt(t.amount)}</span>
     <span class="tx-act"><button class="ib" data-a="delTx" data-id="${t.id}" aria-label="Delete transaction">${I.trash}</button></span>
   </div>`;
 }
@@ -855,8 +899,16 @@ const tabsHTML = () => MAIN.map(p => `<button class="${ui.view === p[0] ? 'on' :
 
 /* ───────── overview ───────── */
 function breakdown(mk, mode) {
-  const map = new Map();
-  for (const t of monthTx(mk)) if (t.type !== 'income') { const k = mode === 'main' ? mainOf(subOf(t.subId)).id : txBucket(t); map.set(k, (map.get(k) || 0) + t.amount); }
+  const map = new Map(), add = (k, a) => map.set(k, (map.get(k) || 0) + a), key = t => mode === 'main' ? mainOf(subOf(t.subId)).id : txBucket(t);
+  let cardPay = 0, cardNew = 0;
+  for (const t of monthTx(mk)) {
+    if (t.type === 'income') continue;
+    if (t.type === 'advance') { if (cardOf(t.cardId)) cardNew += t.amount; continue; }
+    if (t.type === 'debt' && cardOf(t.debtId)) { cardPay += t.amount; continue; }
+    if (t.type === 'expense' && t.cardId && cardOf(t.cardId)) cardNew += t.amount;
+    add(key(t), t.amount);
+  }
+  if (cardPay > cardNew) add(mode === 'main' ? mainOf(subOf('s-debt')).id : 'savings', cardPay - cardNew);
   return [...map].map(([id, amt]) => {
     if (mode === 'main') { const m = mainMap.get(id) || UNMAIN; return {id, amt, label: m.name, icon: m.icon, color: m.color}; }
     return {id, amt, label: BUCKETS[id].label, icon: '', color: BUCKETS[id].color};
@@ -890,7 +942,7 @@ function vOverview() {
   <section class="stats" aria-label="Month summary">
     <div class="stat"><label>Income</label><b class="num">${fmt(s.income)}</b><small>${s.n} ${s.n === 1 ? 'transaction' : 'transactions'} logged</small></div>
     <div class="stat"><label>Expenses</label><b class="num">${fmt(s.expenses)}</b><small>Needs + wants</small></div>
-    <div class="stat"><label>Net savings</label><b class="num ${s.net < 0 ? 'neg' : ''}">${fmt(s.net)}</b><small>${fmt(s.savings)} put to savings &amp; debt, ${s.left < 0 ? fmt(-s.left) + ' overdrawn' : fmt(s.left) + ' unallocated'}</small></div>
+    <div class="stat"><label>Net savings</label><b class="num ${s.net < 0 ? 'neg' : ''}">${fmt(s.net)}</b><small>${fmt(s.savings)} put to savings &amp; debt</small></div>
     <div class="stat"><label>Savings rate</label><b class="num ${s.rate !== null && s.rate < 0 ? 'neg' : ''}">${s.rate === null ? '—' : Math.round(s.rate) + '%'}</b><small>${s.rate === null ? 'Log income to see this' : s.rate >= 20 ? 'At or above the 20% target' : 'Target is 20%'}</small></div>
   </section>
   <section class="sec"><div class="sec-h"><h2>Quick log</h2><button class="btn txt" data-a="openPresets">Edit presets</button></div>
@@ -910,14 +962,14 @@ function vOverview() {
 /* ───────── transactions ───────── */
 function filteredTx() {
   let list = ui.txAll ? [...state.tx] : monthTx(ui.month);
-  if (ui.txType !== 'all') list = list.filter(t => t.type === ui.txType);
+  if (ui.txType !== 'all') list = list.filter(t => t.type === ui.txType || (ui.txType === 'debt' && t.type === 'advance'));
   if (ui.txCat) { const id = ui.txCat.slice(2); list = list.filter(t => ui.txCat[0] === 'm' ? mainOf(subOf(t.subId)).id === id : t.subId === id); }
   const q = ui.txq.trim().toLowerCase();
-  if (q) list = list.filter(t => { const s = subOf(t.subId); return [t.desc, t.notes, t.mode, s.name, mainOf(s).name, t.amount].join(' ').toLowerCase().includes(q); });
+  if (q) list = list.filter(t => { const s = subOf(t.subId); return [t.desc, t.notes, t.mode, s.name, mainOf(s).name, t.amount, t.cardId ? cardOf(t.cardId)?.name : '', t.type === 'advance' ? 'card cash' : ''].join(' ').toLowerCase().includes(q); });
   return list.sort(byNewest);
 }
 function txListHTML() {
-  const list = filteredTx(), inc = sum(list.filter(t => t.type === 'income'), t => t.amount), out = sum(list.filter(t => t.type !== 'income'), t => t.amount);
+  const list = filteredTx(), isIn = t => t.type === 'income' || t.type === 'advance', inc = sum(list.filter(isIn), t => t.amount), out = sum(list.filter(t => !isIn(t)), t => t.amount);
   return `<div class="txs">${list.map(txRow).join('')}<button class="newrow" data-a="newTx">${I.plus} New</button></div>
   ${list.length ? `<div class="tx-foot num"><span>${list.length} ${list.length === 1 ? 'transaction' : 'transactions'}</span><span>In ${fmt(inc)} · Out ${fmt(out)}</span></div>` : `<div class="empty">Nothing matches. Clear the search or filters, or switch month.</div>`}`;
 }
@@ -930,7 +982,7 @@ function vTransactions() {
     <div class="tools"><div class="search">${I.search}<input class="in" id="tx-q" type="search" placeholder="Search merchant, note, category" value="${esc(ui.txq)}" data-i="txq" aria-label="Search transactions"></div>
       ${pick('tx-cat', ui.txCat, cats, {c: 'txCat', title: 'Filter by category', style: 'flex:0 1 220px'})}
       <button class="btn pri" data-a="newTx">${I.plus} New</button></div>
-    <div class="views">${[['all', 'All'], ['expense', 'Expenses'], ['income', 'Income'], ['debt', 'Debt payments']].map(([v, l]) => `<button class="${ui.txType === v ? 'on' : ''}" data-a="txType" data-v="${v}">${l}</button>`).join('')}</div>
+    <div class="views">${[['all', 'All'], ['expense', 'Expenses'], ['income', 'Income'], ['debt', 'Debt & cards']].map(([v, l]) => `<button class="${ui.txType === v ? 'on' : ''}" data-a="txType" data-v="${v}">${l}</button>`).join('')}</div>
     <div id="tx-list">${txListHTML()}</div>
   </section>`;
 }
@@ -976,6 +1028,41 @@ function vBudgets() {
 }
 
 /* ───────── debt ───────── */
+// Credit cards: one panel per card with balance, limit use, the month's activity and quick actions.
+function cardsHTML() {
+  const cs = cards(), mk = ui.month, head = `<div class="sec-h"><h2>Credit cards</h2><button class="btn" data-a="newCard">${I.plus} Add a card</button></div>`;
+  if (!cs.length) return `<section class="sec">${head}<div class="empty">No cards yet. Add each card with its balance and limit to track spending, cash taken and how much of the limit is in use.</div></section>`;
+  const tx = monthTx(mk); let tb = 0, tl = 0, tnew = 0, tpay = 0;
+  const panels = cs.map(d => {
+    const bal = debtBal(d), sp = tx.filter(t => t.type === 'expense' && t.cardId === d.id), ad = tx.filter(t => t.type === 'advance' && t.cardId === d.id), pay = tx.filter(t => t.type === 'debt' && t.debtId === d.id);
+    const spent = sum(sp, t => t.amount), cash = sum(ad, t => t.amount), paid = sum(pay, t => t.amount), util = d.limit > 0 ? bal / d.limit * 100 : null;
+    tb += bal; tl += d.limit || 0; tnew += spent + cash; tpay += paid;
+    const byMain = new Map(); for (const t of sp) { const m = mainOf(subOf(t.subId)); byMain.set(m, (byMain.get(m) || 0) + t.amount); }
+    const top = [...byMain].sort((a, b) => b[1] - a[1]).slice(0, 3), recent = [...sp, ...ad, ...pay].sort(byNewest).slice(0, 4);
+    return `<div class="ccard">
+      <div class="ccard-h"><b>💳 ${esc(d.name)}</b><button class="ib" data-a="editDebt" data-id="${d.id}" aria-label="Edit ${esc(d.name)}">${I.edit}</button></div>
+      <div><div class="ccard-bal num"><b>${fmt(bal)}</b><span class="muted">${d.limit ? 'of ' + fmt(d.limit) + ' limit' : 'owed'}</span></div>
+        ${util !== null ? `<div class="util"><div class="bar"><i class="${util > 75 ? 'bad' : util > 30 ? 'warn' : 'good'}" style="width:${Math.min(100, util).toFixed(1)}%"></i></div><span class="tick" title="30% of limit"></span></div>
+        <div class="bk-top small"><span class="${util > 30 ? 'neg' : 'pos'} num">${Math.round(util)}% of limit used</span><span class="muted num">${fmt(Math.max(0, d.limit - bal))} available</span></div>` : '<p class="small muted">Add a credit limit to see how much is in use.</p>'}</div>
+      <div class="mini num"><div><small>Spent</small><b>${fmt(spent)}</b></div><div><small>Cash taken</small><b>${fmt(cash)}</b></div><div><small>Paid</small><b>${fmt(paid)}</b></div></div>
+      ${top.length ? `<div class="rowline">${top.map(([m, a]) => `<span class="tag c-${m.color}">${m.icon} ${esc(m.name)} · ${fmt(a)}</span>`).join('')}</div>` : ''}
+      ${recent.length ? `<div class="ccard-tx">${recent.map(t => `<button class="r" data-a="editTx" data-id="${t.id}"><span class="muted num">${shortDate(t.date)}</span><span class="t">${esc(t.desc || subOf(t.subId).name)}</span><span class="num ${t.type === 'debt' ? 'pos' : ''}">${t.type === 'debt' ? '−' : '+'}${fmt(t.amount)}</span></button>`).join('')}</div>` : `<p class="small muted">Nothing on this card in ${monthLabel(mk)}.</p>`}
+      <div class="rowline"><button class="btn" data-a="cardExpense" data-id="${d.id}">Add expense</button><button class="btn" data-a="cardCash" data-id="${d.id}">Take cash</button><button class="btn" data-a="payDebt" data-id="${d.id}">Log payment</button></div>
+      <p class="small muted num">${d.apr}% a year · minimum due ${fmt(d.min)} a month</p>
+    </div>`;
+  }).join('');
+  const tu = tl > 0 ? tb / tl * 100 : null;
+  return `<section class="sec">${head}
+    <div class="rowline" style="justify-content:space-between">${monthNav()}<span class="small muted">Activity shown for ${monthLabel(mk)}</span></div>
+    <div class="stats" aria-label="Card summary">
+      <div class="stat"><label>Owed on cards</label><b class="num">${fmt(tb)}</b><small>${cs.length} ${cs.length === 1 ? 'card' : 'cards'}</small></div>
+      <div class="stat"><label>Available credit</label><b class="num">${tl ? fmt(Math.max(0, tl - tb)) : '—'}</b><small class="${tu !== null && tu > 30 ? 'neg' : ''}">${tu === null ? 'No limits entered' : Math.round(tu) + '% of all limits used'}</small></div>
+      <div class="stat"><label>Put on cards</label><b class="num">${fmt(tnew)}</b><small>Spending and cash taken</small></div>
+      <div class="stat"><label>Paid to cards</label><b class="num">${fmt(tpay)}</b><small class="${tnew > tpay ? 'neg' : ''}">${tnew > tpay ? `Card debt up ${fmt(tnew - tpay)}` : tpay > tnew ? `Card debt down ${fmt(tpay - tnew)}` : 'Card debt unchanged'}</small></div>
+    </div>
+    <div class="cards">${panels}</div>
+  </section>`;
+}
 function vDebt() {
   const plan = debtPlan(), cur = plan[state.strategy], other = plan[state.strategy === 'snowball' ? 'avalanche' : 'snowball'];
   const total = sum(plan.list, d => d.bal), mins = sum(state.debts.filter(d => debtBal(d) > 0), d => d.min), active = plan.list.filter(d => d.bal > 0.005).length;
@@ -987,7 +1074,7 @@ function vDebt() {
   const rows = ordered.map((d, i) => {
     const bal = debtBal(d), done = bal <= 0.005, util = d.kind === 'Credit Card' && d.limit > 0 ? bal / d.limit * 100 : null, pm = cur.payoff[d.id];
     return `<div class="debt"><span class="ord num">${done ? '✓' : i + 1}</span>
-      <div class="nm"><b>${esc(d.name)}</b><span class="tag c-${KIND_COLOR[d.kind] || 'gray'}">${esc(d.kind)}</span></div>
+      <div class="nm"><b>${esc(d.name)}</b><span class="tag c-${KIND_COLOR[d.kind] || 'gray'}">${esc(d.kind)}</span>${d.kind !== 'Credit Card' && d.original > 0 ? (p => `<div class="bar" style="margin-top:7px"><i class="good" style="width:${p.toFixed(1)}%"></i></div><small class="muted num">${Math.round(p)}% repaid of ${fmt(d.original)}</small>`)(Math.max(0, Math.min(100, (d.original - bal) / d.original * 100))) : ''}</div>
       <div class="kv k1"><span class="num"><b>${fmt(bal)}</b></span><small class="num">${d.apr}% APR · ${fmt(d.min)}/mo</small></div>
       <div class="kv k2"><span class="num">${done ? 'Paid off' : pm ? monthLabel(shiftMonth(curMonth(), pm), true) : '—'}</span><small>${util !== null ? `<span class="${util > 30 ? 'neg' : ''} num">${Math.round(util)}% of limit used</span>` : done ? '' : 'Projected payoff'}</small></div>
       <div class="acts">${done ? '' : `<button class="btn" data-a="payDebt" data-id="${d.id}">Log payment</button>`}<button class="ib" data-a="editDebt" data-id="${d.id}" aria-label="Edit ${esc(d.name)}">${I.edit}</button></div></div>`;
@@ -996,7 +1083,7 @@ function vDebt() {
   const gantt = cur.order.map(id => { const d = byId.get(id), pm = cur.payoff[id] || span; return `<div class="g-row c-${KIND_COLOR[d.kind] || 'gray'}"><span class="nm">${esc(d.name)}</span><div class="g-track"><div class="g-fill" style="width:${(pm / span * 100).toFixed(1)}%"></div><span class="g-lab num">${cur.payoff[id] ? `${pm} mo · ${monthLabel(shiftMonth(curMonth(), pm), true)}` : 'Not paid off'}</span></div></div>`; }).join('');
   const diff = Math.round(plan.snowball.interest - plan.avalanche.interest);
   return `${titleHTML('debt')}
-  ${!state.debts.length ? `<div class="empty">No debts tracked. Add a card, loan or EMI to see a payoff plan.<div style="margin-top:10px"><button class="btn pri" data-a="newDebt">${I.plus} Add a debt</button></div></div>` : `
+  ${!state.debts.length ? `<div class="empty">No debts tracked. Add a card, loan or EMI to see a payoff plan.<div class="rowline" style="margin-top:10px;justify-content:center"><button class="btn pri" data-a="newCard">${I.plus} Add a card</button><button class="btn" data-a="newDebt">${I.plus} Add a loan or EMI</button></div></div>` : `
   <section class="stats" aria-label="Debt summary">
     <div class="stat"><label>Total remaining</label><b class="num">${fmt(total)}</b><small>${active} open ${active === 1 ? 'debt' : 'debts'}</small></div>
     <div class="stat"><label>Monthly minimums</label><b class="num">${fmt(mins)}</b><small>Plus ${fmt(state.extra)} extra</small></div>
@@ -1004,11 +1091,12 @@ function vDebt() {
     <div class="stat"><label>Interest still to pay</label><b class="num">${cur.stuck ? '—' : fmt(Math.round(cur.interest))}</b><small>With the ${state.strategy} plan</small></div>
   </section>
   ${hot.map(d => `<div class="callout warn"><span class="e">💳</span><div class="b"><div><b>${esc(d.name)} is using ${Math.round(debtBal(d) / d.limit * 100)}% of its limit.</b> Lenders read anything above 30% as a strain. Paying ${fmt(Math.ceil(debtBal(d) - d.limit * 0.3))} brings it under.</div></div></div>`).join('')}
+  ${cardsHTML()}
   <section class="sec"><div class="sec-h"><h2>Payoff strategy</h2><label class="rowline small muted" for="extra">Extra each month <input class="in num" id="extra" type="number" inputmode="decimal" min="0" step="any" value="${state.extra || ''}" placeholder="0" data-c="extra" style="width:110px"></label></div>
     <div class="cmp">${card('avalanche', plan.avalanche, 'Avalanche', 'Highest interest rate first')}${card('snowball', plan.snowball, 'Snowball', 'Smallest balance first')}</div>
     ${total && !cur.stuck && !other.stuck ? `<p class="small muted">${diff > 0 ? `Avalanche saves ${fmt(diff)} in interest over snowball.` : 'Both orders cost the same here.'} Each time a debt clears, its payment rolls into the next one.</p>` : ''}
   </section>
-  <section class="sec"><div class="sec-h"><h2>Your debts, in payoff order</h2><button class="btn" data-a="newDebt">${I.plus} Add a debt</button></div>
+  <section class="sec"><div class="sec-h"><h2>Your debts, in payoff order</h2><button class="btn" data-a="newDebt">${I.plus} Add a loan or EMI</button></div>
     <div class="buds">${rows}</div></section>
   ${total && !cur.stuck ? `<section class="sec"><div class="sec-h"><h2>Timeline</h2></div><div class="gantt">${gantt}<div class="g-axis"><span>Now</span><span>${when(cur)}</span></div></div></section>` : ''}`}`;
 }
@@ -1051,31 +1139,36 @@ function vGuide() {
 
 /* ───────── modals ───────── */
 const mHead = (t, e) => `<div class="modal-h"><h2>${e ? `<span>${e}</span>` : ''}<span>${t}</span></h2><button class="ib" type="button" data-a="close" aria-label="Close">${I.x}</button></div>`;
-function newDraft(over) { return {type: 'expense', amount: '', date: today(), subId: subMap.has('s-groc') ? 's-groc' : state.subs.find(s => s.bucket !== 'income' && !s.sys)?.id || '', mode: 'UPI', desc: '', notes: '', debtId: state.debts[0]?.id || '', ...over}; }
+function newDraft(over) { return {type: 'expense', amount: '', date: today(), subId: subMap.has('s-groc') ? 's-groc' : state.subs.find(s => s.bucket !== 'income' && !s.sys)?.id || '', mode: 'UPI', desc: '', notes: '', debtId: state.debts[0]?.id || '', cardId: cards()[0]?.id || '', ...over}; }
 function mTx() {
-  const d = modal.draft, isDebt = d.type === 'debt';
+  const d = modal.draft, isDebt = d.type === 'debt', isAdv = d.type === 'advance', cs = cards();
+  const modes = [...flat(MODES), ...(d.type === 'expense' ? cs.map(c => ({v: 'card:' + c.id, l: c.name, icon: '💳', g: 'Credit cards'})) : [])];
+  if (d.mode && !String(d.mode).startsWith('card:') && d.mode !== 'Credit Card' && !MODES.includes(d.mode)) modes.splice(MODES.length, 0, {v: d.mode, l: d.mode});
   return `<form class="form" data-f="tx" novalidate>${mHead(d.id ? 'Edit transaction' : 'New transaction')}
   <div class="modal-b">
-    <div class="seg" role="tablist">${[['expense', 'Expense'], ['income', 'Income'], ['debt', 'Debt payment']].map(([v, l]) => `<button type="button" class="${d.type === v ? 'on' : ''}" data-a="draftType" data-v="${v}">${l}</button>`).join('')}</div>
+    <div class="seg" role="tablist">${[['expense', 'Expense'], ['income', 'Income'], ['debt', 'Debt payment'], ['advance', 'Card cash']].map(([v, l]) => `<button type="button" class="${d.type === v ? 'on' : ''}" data-a="draftType" data-v="${v}">${l}</button>`).join('')}</div>
     <label class="fld"><span>Amount (${esc(sym())})</span><input class="in amount num" id="f-amount" name="amount" type="number" inputmode="decimal" min="0" step="any" placeholder="0" value="${esc(d.amount)}" autofocus></label>
     ${modal.err ? `<div class="err">${modal.err}</div>` : ''}
     <div class="fgrid">
-      ${isDebt ? `<label class="fld"><span>Debt</span>${pick('f-debt', d.debtId, state.debts.length ? state.debts.map(x => ({v: x.id, l: x.name})) : [{v: '', l: 'Add a debt first'}], {name: 'debtId', title: 'Debt'})}</label>`
+      ${isAdv ? `<label class="fld"><span>Card</span>${pick('f-card', d.cardId, cs.length ? cs.map(c => ({v: c.id, l: c.name, icon: '💳'})) : [{v: '', l: 'Add a card first'}], {name: 'cardId', title: 'Card'})}</label>`
+        : isDebt ? `<label class="fld"><span>Debt or card</span>${pick('f-debt', d.debtId, state.debts.length ? state.debts.map(x => ({v: x.id, l: x.name, icon: x.kind === 'Credit Card' ? '💳' : '🏦'})) : [{v: '', l: 'Add a debt first'}], {name: 'debtId', title: 'Debt or card'})}</label>`
         : `<label class="fld"><span>Category</span>${pick('f-sub', d.subId, [...(subMap.has(d.subId) ? [] : [{v: '', l: 'Uncategorized', icon: '📄'}]), ...subPickOpts(d.type)], {name: 'subId', title: 'Category'})}</label>`}
       <label class="fld"><span>Date</span><input class="in" id="f-date" name="date" type="date" value="${esc(d.date)}"></label>
-      <label class="fld"><span>Payment mode</span>${pick('f-mode', d.mode, flat(MODES), {name: 'mode', title: 'Payment mode'})}</label>
-      <label class="fld"><span>${d.type === 'income' ? 'Source' : 'Merchant or description'}</span><input class="in" id="f-desc" name="desc" type="text" maxlength="80" value="${esc(d.desc)}" placeholder="${isDebt ? 'Optional' : d.type === 'income' ? 'e.g. Salary credit' : 'e.g. Weekly groceries'}"></label>
+      ${isAdv ? '' : `<label class="fld"><span>${d.type === 'expense' ? 'Paid with' : d.type === 'income' ? 'Received by' : 'Paid from'}</span>${pick('f-mode', d.mode, modes, {name: 'mode', title: d.type === 'expense' ? 'Paid with' : 'Payment mode'})}</label>`}
+      <label class="fld"><span>${d.type === 'income' ? 'Source' : isAdv ? 'Description' : 'Merchant or description'}</span><input class="in" id="f-desc" name="desc" type="text" maxlength="80" value="${esc(d.desc)}" placeholder="${isDebt || isAdv ? 'Optional' : d.type === 'income' ? 'e.g. Salary credit' : 'e.g. Weekly groceries'}"></label>
     </div>
     <label class="fld"><span>Notes</span><input class="in" id="f-notes" name="notes" type="text" maxlength="140" value="${esc(d.notes)}" placeholder="Optional"></label>
+    ${isAdv ? '<p class="small muted">Cash taken from a card adds to your cash in and to the card balance. It is not counted as income.</p>' : d.type === 'expense' && cs.length ? '<p class="small muted">Choose a credit card under Paid with and the amount is added to that card’s balance.</p>' : ''}
   </div>
   <div class="modal-f">${d.id ? `<button class="btn danger sp" type="button" data-a="delTx" data-id="${d.id}">Delete</button>` : ''}<button class="btn txt" type="button" data-a="close">Cancel</button><button class="btn pri lg" type="submit">${d.id ? 'Save changes' : 'Log it'}</button></div></form>`;
 }
 function detailList() {
   const q = (modal.q || '').trim().toLowerCase();
-  let list = monthTx(ui.month).filter(t => t.type !== 'income' && (modal.kind === 'main' ? mainOf(subOf(t.subId)).id === modal.id : txBucket(t) === modal.id));
-  const total = sum(list, t => t.amount);
+  let list = monthTx(ui.month).filter(t => t.type !== 'income' && t.type !== 'advance' && (modal.kind === 'main' ? mainOf(subOf(t.subId)).id === modal.id : txBucket(t) === modal.id));
+  const item = breakdown(ui.month, modal.kind === 'main' ? 'main' : 'bucket').find(x => x.id === modal.id), total = item ? item.amt : 0, raw = sum(list, t => t.amount);
   if (q) list = list.filter(t => [t.desc, t.notes, subOf(t.subId).name, t.mode].join(' ').toLowerCase().includes(q));
   return `<div class="tx-foot num" style="padding-inline:0"><span>${list.length} ${list.length === 1 ? 'transaction' : 'transactions'}${q ? ' found' : ''}</span><span>Total ${fmt(total)}</span></div>
+  ${raw - total > 0.5 ? '<p class="small muted" style="padding-bottom:8px">Card payments count here only beyond what went onto cards this month, so card spending is not counted twice.</p>' : ''}
   ${list.length ? `<div class="txs">${list.sort(byNewest).map(txRow).join('')}</div>` : `<div class="empty">${q ? 'Nothing matches that search.' : 'Nothing logged here this month.'}</div>`}`;
 }
 function mDetail() {
@@ -1139,17 +1232,18 @@ function mAuto() {
   </div><div class="modal-f"><button class="btn txt" data-a="close">Cancel</button><button class="btn pri lg" data-a="applyAuto">Set these limits</button></div>`;
 }
 function mDebt() {
-  const d = modal.draft;
-  return `<form class="form" data-f="debt" novalidate>${mHead(d.id ? 'Edit debt' : 'Add a debt')}<div class="modal-b">
-    <div class="fgrid"><label class="fld"><span>Name</span><input class="in" id="g-name" name="name" maxlength="40" value="${esc(d.name)}" placeholder="e.g. Travel card" autofocus></label>
-    <label class="fld"><span>Type</span>${pick('g-kind', d.kind, flat(DEBT_KINDS), {name: 'kind', title: 'Debt type'})}</label>
-    <label class="fld"><span>Balance owed (${esc(sym())})</span><input class="in num" id="g-bal" name="bal" type="number" inputmode="decimal" min="0" step="any" value="${esc(d.bal)}"></label>
-    <label class="fld"><span>Interest rate (% a year)</span><input class="in num" id="g-apr" name="apr" type="number" inputmode="decimal" min="0" step="any" value="${esc(d.apr)}"></label>
-    <label class="fld"><span>Minimum payment or EMI, monthly</span><input class="in num" id="g-min" name="min" type="number" inputmode="decimal" min="0" step="any" value="${esc(d.min)}"></label>
-    <label class="fld"><span>Credit limit (cards only)</span><input class="in num" id="g-lim" name="limit" type="number" inputmode="decimal" min="0" step="any" value="${esc(d.limit)}" placeholder="Optional"></label></div>
+  const d = modal.draft, isCard = d.kind === 'Credit Card', cur = esc(sym());
+  const numIn = (id, name, label, ph = '') => `<label class="fld"><span>${label}</span><input class="in num" id="${id}" name="${name}" type="number" inputmode="decimal" min="0" step="any" value="${esc(d[name] ?? '')}" placeholder="${ph}"></label>`;
+  return `<form class="form" data-f="debt" novalidate>${mHead(isCard ? (d.id ? 'Edit card' : 'Add a card') : d.id ? 'Edit debt' : 'Add a debt')}<div class="modal-b">
+    <div class="fgrid"><label class="fld"><span>Name</span><input class="in" id="g-name" name="name" maxlength="40" value="${esc(d.name)}" placeholder="${isCard ? 'e.g. Travel card' : 'e.g. Home renovation loan'}" autofocus></label>
+    <label class="fld"><span>Type</span>${pick('g-kind', d.kind, flat(DEBT_KINDS), {name: 'kind', title: 'Debt type', c: 'debtKind'})}</label>
+    ${isCard ? numIn('g-bal', 'bal', `Balance owed now (${cur})`) + numIn('g-lim', 'limit', `Credit limit (${cur})`)
+      : numIn('g-orig', 'original', `Original loan amount (${cur})`, 'What you borrowed') + numIn('g-bal', 'bal', `Current balance (${cur})`, 'What you still owe')}
+    ${numIn('g-apr', 'apr', 'Interest rate (% a year)')}
+    ${numIn('g-min', 'min', isCard ? 'Minimum due each month' : 'EMI or minimum each month')}</div>
     ${modal.err ? `<div class="err">${modal.err}</div>` : ''}
-    ${modal.arm ? `<div class="callout bad"><div class="b"><div>Delete this debt? Payments you logged stay in your transaction history.</div><div class="rowline"><button class="btn" type="button" data-a="delDebt" data-id="${d.id}">Delete debt</button><button class="btn txt" type="button" data-a="arm" data-v="">Keep it</button></div></div></div>` : ''}
-  </div><div class="modal-f">${d.id && !modal.arm ? '<button class="btn danger sp" type="button" data-a="arm" data-v="debt">Delete</button>' : ''}<button class="btn txt" type="button" data-a="close">Cancel</button><button class="btn pri lg" type="submit">${d.id ? 'Save changes' : 'Add debt'}</button></div></form>`;
+    ${modal.arm ? `<div class="callout bad"><div class="b"><div>Delete this ${isCard ? 'card' : 'debt'}? Transactions you logged against it stay in your history.</div><div class="rowline"><button class="btn" type="button" data-a="delDebt" data-id="${d.id}">Delete ${isCard ? 'card' : 'debt'}</button><button class="btn txt" type="button" data-a="arm" data-v="">Keep it</button></div></div></div>` : ''}
+  </div><div class="modal-f">${d.id && !modal.arm ? '<button class="btn danger sp" type="button" data-a="arm" data-v="debt">Delete</button>' : ''}<button class="btn txt" type="button" data-a="close">Cancel</button><button class="btn pri lg" type="submit">${d.id ? 'Save changes' : isCard ? 'Add card' : 'Add debt'}</button></div></form>`;
 }
 function mSettings() {
   const th = state.settings.theme, arm = modal.arm, hosted = !!$('link[rel="manifest"]');
@@ -1251,7 +1345,7 @@ const A = {
   clearSample() { const old = JSON.stringify(state); Object.assign(state, {tx: [], debts: [], budgets: {}, extra: 0, sample: false}); commit(); toast('Sample data cleared', () => { state = JSON.parse(old); }); },
 
   newTx() { open({type: 'tx', draft: newDraft(ui.view === 'debt' && state.debts.length ? {type: 'debt'} : {})}); },
-  editTx(el) { const t = state.tx.find(x => x.id === el.dataset.id); if (t) open({type: 'tx', draft: {...t, amount: String(t.amount)}, back: modal?.type === 'detail' ? modal : null}); },
+  editTx(el) { const t = state.tx.find(x => x.id === el.dataset.id); if (t) open({type: 'tx', draft: {...t, amount: String(t.amount), mode: t.type === 'expense' && t.cardId && cardOf(t.cardId) ? 'card:' + t.cardId : t.mode}, back: modal?.type === 'detail' ? modal : null}); },
   delTx(el) {
     const i = state.tx.findIndex(x => x.id === el.dataset.id); if (i < 0) return;
     const [t] = state.tx.splice(i, 1); if (modal?.type === 'tx') modal = modal.back || null;
@@ -1259,7 +1353,8 @@ const A = {
   },
   draftType(el) {
     snapDraft(); const d = modal.draft, v = el.dataset.v; d.type = v; modal.err = '';
-    if (v !== 'debt') { const ok = subMap.get(d.subId), want = v === 'income'; if (!ok || (ok.bucket === 'income') !== want || ok.sys) d.subId = state.subs.find(s => (s.bucket === 'income') === want && !s.sys)?.id || ''; }
+    if (v === 'advance' && !cardOf(d.cardId)) d.cardId = cards()[0]?.id || '';
+    if (v === 'expense' || v === 'income') { const ok = subMap.get(d.subId), want = v === 'income'; if (!ok || (ok.bucket === 'income') !== want || ok.sys) d.subId = state.subs.find(s => (s.bucket === 'income') === want && !s.sys)?.id || ''; }
     renderModal();
   },
   quick(el) {
@@ -1297,8 +1392,11 @@ const A = {
   applyAuto() { if (!(num(modal.income) > 0)) return; const old = {...state.budgets}; state.budgets = {...modal.result}; modal = null; commit(); renderModal(); toast('Limits set from your income', () => { state.budgets = old; }); },
 
   strategy(el) { state.strategy = el.dataset.v; commit(); },
-  newDebt() { open({type: 'debt', draft: {name: '', kind: 'Credit Card', bal: '', apr: '', min: '', limit: ''}}); },
-  editDebt(el) { const d = state.debts.find(x => x.id === el.dataset.id); open({type: 'debt', draft: {id: d.id, name: d.name, kind: d.kind, bal: String(debtBal(d)), apr: String(d.apr), min: String(d.min), limit: d.limit ? String(d.limit) : ''}}); },
+  newDebt() { open({type: 'debt', draft: {name: '', kind: 'Personal Loan', bal: '', original: '', apr: '', min: '', limit: ''}}); },
+  newCard() { open({type: 'debt', draft: {name: '', kind: 'Credit Card', bal: '', original: '', apr: '', min: '', limit: ''}}); },
+  cardExpense(el) { open({type: 'tx', draft: newDraft({type: 'expense', mode: 'card:' + el.dataset.id})}); },
+  cardCash(el) { open({type: 'tx', draft: newDraft({type: 'advance', cardId: el.dataset.id})}); },
+  editDebt(el) { const d = state.debts.find(x => x.id === el.dataset.id); open({type: 'debt', draft: {id: d.id, name: d.name, kind: d.kind, bal: String(debtBal(d)), original: d.original ? String(d.original) : '', apr: String(d.apr), min: String(d.min), limit: d.limit ? String(d.limit) : ''}}); },
   delDebt(el) { state.debts = state.debts.filter(d => d.id !== el.dataset.id); modal = null; commit(); renderModal(); toast('Debt deleted'); },
   payDebt(el) { const d = state.debts.find(x => x.id === el.dataset.id); open({type: 'tx', draft: newDraft({type: 'debt', debtId: d.id, amount: String(Math.min(d.min, debtBal(d)) || ''), mode: 'Net Banking'})}); },
 
@@ -1365,10 +1463,15 @@ const F = {
     const d = modal.draft; Object.assign(d, v); const amount = num(v.amount);
     if (!(amount > 0)) { modal.err = 'Enter an amount above zero.'; return renderModal(); }
     if (!/^\d{4}-\d{2}-\d{2}$/.test(v.date || '')) { modal.err = 'Pick a date.'; return renderModal(); }
-    if (d.type === 'debt' && !state.debts.some(x => x.id === v.debtId)) { modal.err = 'Add a debt on the Debt freedom page first.'; return renderModal(); }
-    const t = {id: d.id || uid(), type: d.type, date: v.date, amount, mode: v.mode, desc: (v.desc || '').trim(), notes: (v.notes || '').trim(), ts: d.ts || Date.now()};
+    if (d.type === 'debt' && !state.debts.some(x => x.id === v.debtId)) { modal.err = 'Add a debt or card on the Debt freedom page first.'; return renderModal(); }
+    if (d.type === 'advance' && !cardOf(v.cardId)) { modal.err = 'Add a credit card on the Debt freedom page first.'; return renderModal(); }
+    const t = {id: d.id || uid(), type: d.type, date: v.date, amount, mode: v.mode || '', desc: (v.desc || '').trim(), notes: (v.notes || '').trim(), ts: d.ts || Date.now()};
     if (d.type === 'debt') { t.debtId = v.debtId; t.subId = subMap.has('s-debt') ? 's-debt' : (state.subs.find(s => s.sys)?.id || null); if (!t.desc) t.desc = 'Payment · ' + state.debts.find(x => x.id === v.debtId).name; }
-    else t.subId = subMap.has(v.subId) ? v.subId : null;
+    else if (d.type === 'advance') { t.cardId = v.cardId; t.subId = null; t.mode = 'Credit Card'; if (!t.desc) t.desc = 'Cash from ' + cardOf(v.cardId).name; }
+    else {
+      t.subId = subMap.has(v.subId) ? v.subId : null;
+      if (String(t.mode).startsWith('card:')) { const c = d.type === 'expense' ? cardOf(t.mode.slice(5)) : null; if (c) { t.cardId = c.id; t.mode = 'Credit Card'; } else t.mode = 'UPI'; }
+    }
     const i = state.tx.findIndex(x => x.id === t.id); if (i >= 0) state.tx[i] = t; else state.tx.push(t);
     modal = modal.back || null; commit(); if (!modal) renderModal();
     const mk = t.date.slice(0, 7); toast(i >= 0 ? 'Changes saved' : mk !== ui.month && !ui.txAll ? `Logged to ${monthLabel(mk)}` : 'Logged');
@@ -1381,16 +1484,18 @@ const F = {
   sub(v) { const s = subMap.get(modal.edit.id), name = (v.name || '').trim(); if (s && name) s.name = name; modal.edit = null; commit(); },
   addSub(v, f) { const name = (v.name || '').trim(), m = mainMap.get(f.dataset.id); if (!name || !m) return; state.subs.push({id: 's-' + uid(), mainId: m.id, name, bucket: m.type === 'income' ? 'income' : 'wants'}); commit(); $('#add-' + m.id)?.focus(); },
   debt(v) {
-    const d = modal.draft; Object.assign(d, v); const name = (v.name || '').trim(), bal = num(v.bal);
-    if (!name) { modal.err = 'Give the debt a name.'; return renderModal(); }
-    if (!(bal >= 0) || (!d.id && bal <= 0)) { modal.err = 'Enter the balance you owe.'; return renderModal(); }
-    const paid = d.id ? paidMap.get(d.id) || 0 : 0, rec = {id: d.id || 'd-' + uid(), name, kind: v.kind, principal: bal + paid, apr: Math.max(0, num(v.apr)), min: Math.max(0, num(v.min)), limit: Math.max(0, num(v.limit))};
+    const d = modal.draft; Object.assign(d, v); const name = (v.name || '').trim(), bal = num(v.bal), isCard = v.kind === 'Credit Card';
+    if (!name) { modal.err = isCard ? 'Give the card a name.' : 'Give the debt a name.'; return renderModal(); }
+    if (v.bal === '' || !(bal >= 0) || (!isCard && !d.id && bal <= 0)) { modal.err = isCard ? 'Enter what you owe on the card now. Use 0 if it is clear.' : 'Enter the balance you still owe.'; return renderModal(); }
+    const paid = d.id ? paidMap.get(d.id) || 0 : 0, charged = d.id ? chargeMap.get(d.id) || 0 : 0;
+    const rec = {id: d.id || 'd-' + uid(), name, kind: v.kind, principal: bal + paid - charged, original: isCard ? 0 : Math.max(0, num(v.original)), apr: Math.max(0, num(v.apr)), min: Math.max(0, num(v.min)), limit: isCard ? Math.max(0, num(v.limit)) : 0};
     const i = state.debts.findIndex(x => x.id === rec.id); if (i >= 0) state.debts[i] = rec; else state.debts.push(rec);
-    modal = null; commit(); renderModal(); toast(i >= 0 ? 'Debt updated' : 'Debt added');
+    modal = null; commit(); renderModal(); toast(isCard ? (i >= 0 ? 'Card updated' : 'Card added') : i >= 0 ? 'Debt updated' : 'Debt added');
   }
 };
 const C = {
   txAll(el) { ui.txAll = el.checked; render(); },
+  debtKind(el) { snapDraft(); modal.draft.kind = el.value; modal.err = ''; renderModal(true); },
   txCat(el) { ui.txCat = el.value; render(); },
   limit(el) { const v = num(el.value); if (v > 0) state.budgets[el.dataset.id] = v; else delete state.budgets[el.dataset.id]; save(); softRender(); },
   extra(el) { state.extra = Math.max(0, num(el.value)); save(); softRender(); },
