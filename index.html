@@ -441,7 +441,7 @@ textarea.in{resize:vertical;min-height:64px;font-family:var(--mono);font-size:12
 /* ───────── constants ───────── */
 const KEY = 'paisa-ledger-v1'; // kept from the app's first name so saved data carries over
 const COLORS = ['gray','brown','orange','yellow','green','blue','purple','pink','red'];
-const EMOJI = ['💰','🏠','🍽️','🚇','🩺','🛍️','🎬','🍻','👪','🏦','☕','🛒','🚕','🍱','⛽','💡','📶','📱','🎓','✈️','🎁','🐶','👶','💊','🏋️','📚','🎮','💇','🧾','🔧','🚗','🏥','🎵','🍕','💳','🪙','📈','🧺','🚬','🎟️','📁','🚌'];
+const EMOJI = ['💼','🤝','💰','🏠','🍽️','🚇','🩺','🛍️','🎬','🍻','👪','🏦','☕','🛒','🚕','🍱','⛽','💡','📶','📱','🎓','✈️','🎁','🐶','👶','💊','🏋️','📚','🎮','💇','🧾','🔧','🚗','🏥','🎵','🍕','💳','🪙','📈','🧺','🚬','🎟️','📁','🚌'];
 const MODES = ['UPI','Debit Card','Cash','Net Banking','Wallet'];
 const BUCKETS = {
   needs:{label:'Needs',pct:50,color:'blue',hint:'Rent, bills, groceries, commute, family support'},
@@ -459,18 +459,21 @@ const PAGES = [
   ['guide','📘','Money guide','Three ideas this app is built on, worked through with your own numbers.']
 ];
 const MAIN = PAGES.filter(p => p[0] !== 'guide');
+const CAT_V = 2;
 const DEF = [
-  ['m-income','Income & Earnings','💰','green','income',[['s-salary','Salary'],['s-freelance','Freelance'],['s-invinc','Investments']]],
-  ['m-housing','Housing & Living','🏠','brown','expense',[['s-rent','Rent','needs'],['s-util','Utilities','needs'],['s-net','Internet','needs']]],
-  ['m-food','Food & Dining','🍽️','orange','expense',[['s-groc','Groceries','needs'],['s-dine','Dining Out','wants'],['s-coffee','Coffee','wants']]],
-  ['m-transport','Transportation & Commute','🚇','blue','expense',[['s-fuel','Fuel','needs'],['s-metro','Metro','needs'],['s-bus','Bus','needs'],['s-taxi','Taxi','needs']]],
-  ['m-health','Healthcare & Insurance','🩺','red','expense',[['s-doctor','Doctor & Pharmacy','needs'],['s-insure','Health Insurance','needs']]],
-  ['m-shop','Shopping & Lifestyle','🛍️','pink','expense',[['s-clothes','Clothing','wants'],['s-gadgets','Electronics','wants'],['s-care','Personal Care','wants']]],
-  ['m-fun','Entertainment & Leisure','🎬','purple','expense',[['s-stream','Movies & Streaming','wants'],['s-hobby','Hobbies','wants'],['s-travel','Travel','wants']]],
-  ['m-pubs','Pubs, Drinks & Nightlife','🍻','yellow','expense',[['s-night','Nightlife','wants'],['s-beer','Beers','wants'],['s-smoke','Tobacco / Weed','wants'],['s-drinks','Drinks','wants']]],
-  ['m-family','Family & Parents Support','👪','gray','expense',[['s-elder','Elder Care','needs'],['s-home','Allowance Sent Home','needs']]],
-  ['m-save','Savings & Debt','🏦','green','expense',[['s-emerg','Emergency Fund','savings'],['s-sip','Investments & SIPs','savings'],['s-debt','Debt Repayment','savings']]]
+  ['m-income','Income','💼','green','income',[['s-salary','Salary'],['s-freelance','Freelance'],['s-cashback','Cashback & Refunds'],['s-repaid','Repaid by Friends'],['s-invinc','Other Income']]],
+  ['m-housing','Housing & Living','🏠','brown','expense',[['s-rent','Rent','needs'],['s-util','Utilities','needs'],['s-net','Mobile & Internet','needs']]],
+  ['m-transport','Transport','🚗','blue','expense',[['s-taxi','Taxi','needs'],['s-fuel','Fuel & Vehicle','needs'],['s-metro','Metro & Bus','needs']]],
+  ['m-food','Food & Dining','🍽️','orange','expense',[['s-groc','Groceries','needs'],['s-dine','Eating Out','wants'],['s-delivery','Food Delivery','wants'],['s-coffee','Coffee & Snacks','wants']]],
+  ['m-health','Health & Education','🩺','red','expense',[['s-doctor','Healthcare & Pharmacy','needs'],['s-insure','Insurance','needs'],['s-edu','Education','needs']]],
+  ['m-family','Family & Friends','🤝','gray','expense',[['s-home','Parents Support','needs'],['s-elder','Parents Medical','needs'],['s-lent','Lent to Friends','wants']]],
+  ['m-shop','Shopping & Lifestyle','🛍️','pink','expense',[['s-clothes','Clothing','wants'],['s-gadgets','Electronics','wants'],['s-care','Grooming','wants'],['s-gifts','Gifts','wants']]],
+  ['m-fun','Entertainment & Leisure','🎬','purple','expense',[['s-stream','Subscriptions','wants'],['s-movies','Movies & Events','wants'],['s-travel','Travel','wants'],['s-fitness','Fitness','wants'],['s-hobby','Hobbies','wants']]],
+  ['m-pubs','Pubs & Nightlife','🍻','yellow','expense',[['s-night','Pubs & Night Outs','wants'],['s-drinks','Liquor','wants'],['s-smoke','Smokes & Weed','wants']]],
+  ['m-save','Savings & Debt','💰','green','expense',[['s-emerg','Emergency Fund','savings'],['s-sip','Investments & SIPs','savings'],['s-debt','Debt Repayment','savings']]]
 ];
+// Categories folded into another one when moving an older setup to the list above.
+const CAT_MERGE = {'s-bus': 's-metro', 's-beer': 's-drinks'};
 const svg = p => `<svg viewBox="0 0 16 16" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${p}</svg>`;
 const I = {
   edit: svg('<path d="M11.2 2.4l2.4 2.4-7.9 7.9-3.1.7.7-3.1z"/>'),
@@ -562,6 +565,7 @@ function mergeStates(a, b, now = Date.now()) {
   const m = bMeta ? b : a;
   out.budgets = {...(m.budgets || {})}; out.strategy = m.strategy; out.extra = m.extra; out.sample = !!m.sample;
   out.metaU = Math.max(a.metaU || 0, b.metaU || 0);
+  out.catV = Math.max(a.catV || 0, b.catV || 0);
   out.settings = {...a.settings, currency: (m.settings || {}).currency || a.settings.currency};
   out.del = {};
   for (const k in del) if (!alive.has(k) && now - del[k] < 180 * 864e5) out.del[k] = del[k];
@@ -595,7 +599,7 @@ function blank() {
       {id: 'p3', label: 'Groceries', icon: '🛒', subId: 's-groc', amount: 500},
       {id: 'p4', label: 'Lunch', icon: '🍱', subId: 's-dine', amount: 200}
     ],
-    strategy: 'avalanche', extra: 0, sample: false
+    strategy: 'avalanche', extra: 0, sample: false, catV: CAT_V
   };
 }
 function withSample() {
@@ -627,9 +631,9 @@ function withSample() {
     e(2, 's-metro', 500, 'Metro card top-up'); e(16, 's-metro', 500, 'Metro card top-up');
     e(1, 's-taxi', 320, 'Cab home', 'UPI'); e(14, 's-taxi', 280, 'Auto'); e(22, 's-taxi', 410, 'Airport cab');
     e(10, 's-fuel', 1500, 'Petrol', 'Card'); e(13, 's-doctor', 800, 'Pharmacy'); e(11, 's-care', 600, 'Haircut', 'Cash');
-    e(2, 's-stream', 649, 'Streaming subscription', 'Card'); e(19, 's-stream', 700, 'Movie tickets');
+    e(2, 's-stream', 649, 'Streaming subscription', 'Card'); e(19, 's-movies', 700, 'Movie tickets');
     e(17, 's-clothes', 2400, 'Shirts', 'Card');
-    e(3, 's-beer', 900, 'Beers after work'); e(20, 's-beer', 1400, 'Weekend pub'); e(13, 's-night', 2200, 'Club night', 'Card');
+    e(3, 's-night', 900, 'Beers after work'); e(20, 's-night', 1400, 'Weekend pub'); e(13, 's-night', 2200, 'Club night', 'Card');
     e(9, 's-smoke', 350, 'Corner shop', 'Cash'); e(23, 's-smoke', 350, 'Corner shop', 'Cash');
     if (off === -1) e(21, 's-gadgets', 3500, 'Earphones', 'Card');
   });
@@ -639,12 +643,32 @@ function withSample() {
     {id: 'd-loan', name: 'Personal loan', kind: 'Personal Loan', principal: 192000, original: 250000, apr: 13.5, min: 6200, limit: 0},
     {id: 'd-phone', name: 'Phone EMI', kind: 'EMI', principal: 28000, apr: 15, min: 2000, limit: 0}
   ];
-  s.budgets = {'s-rent': 22000, 's-util': 3000, 's-net': 1000, 's-groc': 8000, 's-dine': 4000, 's-coffee': 800, 's-metro': 1000, 's-taxi': 1200, 's-fuel': 2000, 's-insure': 1800, 's-clothes': 3000, 's-stream': 700, 's-beer': 2500, 's-night': 2500, 's-smoke': 800, 's-home': 8000, 's-sip': 10000, 's-emerg': 5000, 's-debt': 20000};
+  s.budgets = {'s-rent': 22000, 's-util': 3000, 's-net': 1000, 's-groc': 8000, 's-dine': 4000, 's-coffee': 800, 's-metro': 1000, 's-taxi': 1200, 's-fuel': 2000, 's-insure': 1800, 's-clothes': 3000, 's-stream': 700, 's-night': 5000, 's-smoke': 800, 's-home': 8000, 's-sip': 10000, 's-emerg': 5000, 's-debt': 20000};
   s.extra = 3000; s.sample = true;
   return s;
 }
 const valid = o => o && Array.isArray(o.mains) && Array.isArray(o.subs) && Array.isArray(o.tx);
-function normalize(o) {
+// Bring an older category setup to the current list. Default categories are renamed in place (same ids, so
+// transactions, budgets and presets follow), folded ones are merged, and anything the user created is kept.
+function migrateCats(s) {
+  const now = Date.now(), del = s.del = s.del || {};
+  for (const [from, to] of Object.entries(CAT_MERGE)) {
+    if (!s.subs.some(x => x.id === from)) continue;
+    for (const t of s.tx) if (t.subId === from) { t.subId = to; t.u = now; }
+    for (const p of s.presets) if (p.subId === from) { p.subId = to; p.u = now; }
+    if (s.budgets[from]) s.budgets[to] = (s.budgets[to] || 0) + s.budgets[from];
+    delete s.budgets[from]; del['subs:' + from] = now;
+  }
+  const mainById = new Map(s.mains.map(m => [m.id, m])), subById = new Map(s.subs.map(x => [x.id, x])), mains = [], subs = [], ids = new Set();
+  for (const [id, name, icon, color, type, list] of DEF) {
+    mains.push({...(mainById.get(id) || {}), id, name, icon, color, type, u: now}); ids.add(id); delete del['mains:' + id];
+    for (const [sid, sname, bucket] of list) { subs.push({...(subById.get(sid) || {}), id: sid, mainId: id, name: sname, bucket: bucket || 'income', ...(sid === 's-debt' ? {sys: true} : {}), u: now}); ids.add(sid); delete del['subs:' + sid]; }
+  }
+  s.mains = [...mains, ...s.mains.filter(m => !ids.has(m.id))];
+  s.subs = [...subs, ...s.subs.filter(x => !ids.has(x.id) && !CAT_MERGE[x.id])];
+  s.metaU = now; s.catV = CAT_V;
+}
+function normalize(o, migrate = true) {
   const b = blank();
   const s = {...b, ...o, settings: {...b.settings, ...(o.settings || {})}};
   if (!CUR[s.settings.currency]) s.settings.currency = 'INR';
@@ -656,14 +680,17 @@ function normalize(o) {
   if (!['snowball', 'avalanche'].includes(s.strategy)) s.strategy = 'avalanche';
   s.extra = Math.max(0, +s.extra || 0);
   s.del = s.del && typeof s.del === 'object' && !Array.isArray(s.del) ? s.del : {};
+  s.catV = o.catV || 0;
+  if (migrate && s.catV < CAT_V) migrateCats(s);
   delete s.app; delete s.exportedAt;
   return s;
 }
+let needStore = false;
 function load() {
   try {
     localStorage.setItem(KEY + ':probe', '1'); localStorage.removeItem(KEY + ':probe');
     const raw = localStorage.getItem(KEY);
-    if (raw) { const o = JSON.parse(raw); if (valid(o)) return normalize(o); }
+    if (raw) { const o = JSON.parse(raw); if (valid(o)) { needStore = (o.catV || 0) < CAT_V; return normalize(o); } }
   } catch (e) { storageOK = false; }
   return withSample();
 }
@@ -766,7 +793,7 @@ async function pull() {
   else { const r2 = await gh('/contents/' + SYNC_FILE, {headers: {Accept: 'application/vnd.github.raw+json'}}); if (!r2.ok) throw new Error(ghError(r2)); text = await r2.text(); }
   let o; try { o = JSON.parse(text); o = o.state || o; } catch (e) { o = null; }
   if (!valid(o)) throw new Error(`${SYNC_FILE} in the repository is not a Pocket data file. Delete it on GitHub and sync again.`);
-  return {sha: j.sha, state: normalize(o)};
+  return {sha: j.sha, state: normalize(o, false)};
 }
 async function push(st, sha) {
   const r = await gh('/contents/' + SYNC_FILE, {method: 'PUT', body: JSON.stringify({message: 'Pocket sync', content: b64e(JSON.stringify({app: 'pocket', savedAt: new Date().toISOString(), state: pack(st)})), ...(sha ? {sha} : {})})});
@@ -1530,7 +1557,7 @@ document.addEventListener('keydown', e => {
 window.addEventListener('beforeinstallprompt', e => { e.preventDefault(); installEvt = e; if (modal?.type === 'settings') renderModal(true); });
 if ($('link[rel="manifest"]') && 'serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
 
-state = load(); resetShadow(); sync = hosted() ? loadSync() : null;
+state = load(); resetShadow(); sync = hosted() ? loadSync() : null; if (needStore) store();
 window.addEventListener('online', () => { if (sync) syncNow(); });
 window.addEventListener('offline', () => { if (sync) { syncState.err = 'offline'; paintSync(); } });
 document.addEventListener('visibilitychange', () => {
