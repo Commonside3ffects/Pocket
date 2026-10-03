@@ -144,6 +144,25 @@ h1,h2,h3{text-wrap:balance}
 .in,.sel{min-height:32px;padding:4px 9px;border-radius:4px;border:1px solid var(--line2);background:var(--field);width:100%;min-width:0}
 .in:focus,.sel:focus{outline:2px solid var(--accent);outline-offset:-1px;border-color:transparent}
 textarea.in{resize:vertical;min-height:64px;font-family:var(--mono);font-size:12px}
+.sel.pick{display:inline-flex;align-items:center;justify-content:space-between;gap:8px;text-align:left;cursor:pointer}
+.fld .sel.pick,.preset .sel.pick{display:flex}
+.pick-l{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.sel.pick svg{flex:none;color:var(--fg3)}
+.menu-scrim{position:fixed;inset:0;z-index:50}
+.menu{position:fixed;background:var(--pop);border-radius:6px;box-shadow:var(--shadow);display:flex;flex-direction:column;overflow:hidden}
+.menu-h{display:none}
+.menu .menu-s{flex:none;margin:8px 8px 2px}
+.menu-list{overflow-y:auto;padding:4px;display:flex;flex-direction:column;min-height:0}
+.menu-g{padding:9px 8px 3px;font-size:12px;color:var(--fg3);font-weight:500}
+.menu-o{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:5px 8px;border-radius:4px;min-height:32px;width:100%;flex:none}
+.menu-o:hover,.menu-o:focus-visible{background:var(--hover)}
+.menu-o.on{font-weight:600}
+.menu-o .l{display:flex;align-items:center;gap:8px;min-width:0}
+.menu-o>svg{color:var(--accent);flex:none}
+.menu-list.grid{flex-direction:row;flex-wrap:wrap;gap:2px;padding:8px}
+.menu-list.grid button{width:38px;height:38px;border-radius:4px;font-size:19px;display:inline-flex;align-items:center;justify-content:center}
+.menu-list.grid button:hover{background:var(--hover)}
+.menu-list.grid button.on{box-shadow:inset 0 0 0 2px var(--accent)}
 .seg{display:inline-flex;background:var(--hover);border-radius:6px;padding:2px;gap:2px;max-width:100%}
 .seg button{padding:3px 10px;border-radius:4px;color:var(--fg2);font-weight:500;min-height:26px;white-space:nowrap}
 .seg button.on{background:var(--bg);color:var(--fg);box-shadow:0 0 0 1px var(--line2)}
@@ -358,6 +377,12 @@ textarea.in{resize:vertical;min-height:64px;font-family:var(--mono);font-size:12
   .stat:nth-child(3){border-left:0}
   .stat:nth-child(n+3){border-top:1px solid var(--line)}
   .cols{grid-template-columns:minmax(0,1fr)}
+  .menu-scrim{background:var(--scrim)}
+  .menu{left:0;right:0;bottom:0;max-height:72dvh;border-radius:12px 12px 0 0;padding-bottom:env(safe-area-inset-bottom,0px)}
+  .menu-h{display:flex;align-items:center;justify-content:space-between;padding:12px 10px 4px 16px;font-weight:600;font-size:16px;flex:none}
+  .menu-o{min-height:46px;font-size:15px;padding-inline:12px}
+  .menu-g{padding-inline:12px}
+  .menu-list.grid button{width:46px;height:46px;font-size:22px}
   .scrim{padding:0;align-items:flex-end}
   .modal,.modal.wide{max-width:none;border-radius:12px 12px 0 0;max-height:92dvh}
   .debt{grid-template-columns:22px minmax(0,1fr) minmax(0,1fr);grid-template-areas:"o n n" ". a b" ". c c"}
@@ -389,6 +414,7 @@ textarea.in{resize:vertical;min-height:64px;font-family:var(--mono);font-size:12
 <nav class="tabs" id="tabs" aria-label="Pages"></nav>
 <button class="fab" data-a="newTx" aria-label="New transaction"><svg viewBox="0 0 16 16" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><path d="M8 3v10M3 8h10"/></svg></button>
 <div id="modal" hidden></div>
+<div id="menu" hidden></div>
 <div id="toast"></div>
 <script>
 (() => {
@@ -439,6 +465,7 @@ const I = {
   search: svg('<circle cx="7" cy="7" r="4.2"/><path d="M10.2 10.2l3.3 3.3"/>'),
   gear: svg('<path d="M6.85 3.39L7.04 1.57L8.96 1.57L9.15 3.39L10.45 3.93L11.87 2.77L13.23 4.13L12.07 5.55L12.61 6.85L14.43 7.04L14.43 8.96L12.61 9.15L12.07 10.45L13.23 11.87L11.87 13.23L10.45 12.07L9.15 12.61L8.96 14.43L7.04 14.43L6.85 12.61L5.55 12.07L4.13 13.23L2.77 11.87L3.93 10.45L3.39 9.15L1.57 8.96L1.57 7.04L3.39 6.85L3.93 5.55L2.77 4.13L4.13 2.77L5.55 3.93Z"/><circle cx="8" cy="8" r="2.1"/>'),
   book: svg('<path d="M8 4.2C6.8 3.3 5 3 2.8 3.2v8.6c2.2-.2 4 .1 5.2 1 1.2-.9 3-1.2 5.2-1V3.2C11 3 9.2 3.3 8 4.2zM8 4.2v8.6"/>'),
+  check: svg('<path d="M3.5 8.5l3 3 6-6.5"/>'),
   tag: svg('<path d="M2.5 8.3V2.5h5.8l5.2 5.2-5.8 5.8z"/><circle cx="5.4" cy="5.4" r=".9"/>')
 };
 const LOGO = '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7.5 8V6a1.2 1.2 0 0 1 1.2-1.2h6.6A1.2 1.2 0 0 1 16.5 6v2"/><rect x="3" y="8" width="18" height="11.5" rx="2.6"/><path d="M21 11.6h-3.4a2.15 2.15 0 0 0 0 4.3H21"/><circle cx="17.7" cy="13.75" r=".7" fill="currentColor" stroke="none"/></svg>';
@@ -761,13 +788,41 @@ function txRow(t) {
     <span class="tx-act"><button class="ib" data-a="delTx" data-id="${t.id}" aria-label="Delete transaction">${I.trash}</button></span>
   </div>`;
 }
-function subOptions(type, sel) {
-  return state.mains.filter(m => m.type === type).map(m => {
-    const subs = state.subs.filter(s => s.mainId === m.id && !s.sys);
-    return subs.length ? `<optgroup label="${esc(m.icon + ' ' + m.name)}">${subs.map(s => `<option value="${s.id}"${s.id === sel ? ' selected' : ''}>${esc(s.name)}</option>`).join('')}</optgroup>` : '';
-  }).join('');
+// In-app pickers. A native dropdown opens the phone's own menu, so every choice list is drawn by the app.
+let menu = null; const PICKS = {};
+const pickLabel = x => `${x.icon && x.icon !== x.l ? `<span>${x.icon}</span> ` : ''}${esc(x.l)}`;
+function pick(id, value, options, o = {}) {
+  const cur = options.find(x => String(x.v) === String(value)) || options[0] || {v: '', l: 'Select'};
+  PICKS[id] = {options, value: cur.v, o};
+  return `<button type="button" class="sel pick" id="${id}" data-a="openPick" aria-haspopup="listbox" aria-label="${esc(o.title || 'Choose')}: ${esc(cur.l)}"${o.style ? ` style="${o.style}"` : ''}><span class="pick-l">${pickLabel(cur)}</span>${I.down}</button>${o.name ? `<input type="hidden" name="${o.name}" id="${id}-v" value="${esc(cur.v)}">` : ''}`;
 }
-const opts = (list, sel) => list.map(o => { const [v, l] = Array.isArray(o) ? o : [o, o]; return `<option value="${esc(v)}"${String(v) === String(sel) ? ' selected' : ''}>${esc(l)}</option>`; }).join('');
+const flat = list => list.map(o => { const [v, l] = Array.isArray(o) ? o : [o, o]; return {v, l}; });
+function subPickOpts(type) {
+  const out = [];
+  for (const m of state.mains) if (m.type === type) for (const x of state.subs) if (x.mainId === m.id && !x.sys) out.push({v: x.id, l: x.name, g: m.icon + ' ' + m.name, icon: m.icon, color: m.color});
+  return out;
+}
+function menuList() {
+  const p = PICKS[menu.id], q = (menu.q || '').trim().toLowerCase(); let g = null, out = '';
+  for (const x of p.options) {
+    if (q && !(x.l + ' ' + (x.g || '')).toLowerCase().includes(q)) continue;
+    const on = String(x.v) === String(p.value);
+    if (p.o.grid) { out += `<button class="${on ? 'on' : ''}" data-a="pickOpt" data-v="${esc(x.v)}" role="option" aria-selected="${on}" aria-label="${esc(x.l)}">${esc(x.l)}</button>`; continue; }
+    if ((x.g || '') !== g) { g = x.g || ''; if (g) out += `<div class="menu-g">${esc(g)}</div>`; }
+    out += `<button class="menu-o${on ? ' on' : ''}" data-a="pickOpt" data-v="${esc(x.v)}" role="option" aria-selected="${on}"><span class="l">${x.color ? `<span class="dot c-${x.color}"></span>` : x.icon && !x.g ? `<span>${x.icon}</span>` : ''}<span>${esc(x.l)}</span></span>${on ? I.check : ''}</button>`;
+  }
+  return out || '<div class="menu-g">No matches</div>';
+}
+function renderMenu() {
+  const root = $('#menu');
+  document.body.classList.toggle('lock', !!(modal || menu));
+  if (!menu) { root.innerHTML = ''; root.hidden = true; return; }
+  const p = PICKS[menu.id]; root.hidden = false;
+  root.innerHTML = `<div class="menu-scrim" data-a="menuScrim"><div class="menu" role="listbox" aria-label="${esc(p.o.title || 'Options')}" style="${menu.style}"><div class="menu-h">${esc(p.o.title || 'Choose')}<button class="ib" data-a="closeMenu" aria-label="Close">${I.x}</button></div>${p.options.length > 8 && !p.o.grid ? `<div class="search menu-s">${I.search}<input class="in" id="menu-q" type="search" placeholder="Search" data-i="pickQ" aria-label="Search options"></div>` : ''}<div class="menu-list${p.o.grid ? ' grid' : ''}" id="menu-list">${menuList()}</div></div></div>`;
+  if (menu.style) ($('#menu-q') || $('.menu-o.on', root) || $('#menu-list button', root))?.focus({preventScroll: true});
+  $('#menu-list .on', root)?.scrollIntoView({block: 'nearest'});
+}
+function closeMenu() { if (!menu) return; const id = menu.id; menu = null; renderMenu(); document.getElementById(id)?.focus({preventScroll: true}); }
 function budStatus(spent, limit, bucket) {
   if (!limit) return {cls: '', label: 'No limit', pct: 0};
   const p = spent / limit * 100;
@@ -867,12 +922,13 @@ function txListHTML() {
   ${list.length ? `<div class="tx-foot num"><span>${list.length} ${list.length === 1 ? 'transaction' : 'transactions'}</span><span>In ${fmt(inc)} · Out ${fmt(out)}</span></div>` : `<div class="empty">Nothing matches. Clear the search or filters, or switch month.</div>`}`;
 }
 function vTransactions() {
-  const cats = state.mains.map(m => `<optgroup label="${esc(m.icon + ' ' + m.name)}"><option value="m:${m.id}"${ui.txCat === 'm:' + m.id ? ' selected' : ''}>All of ${esc(m.name)}</option>${state.subs.filter(s => s.mainId === m.id).map(s => `<option value="s:${s.id}"${ui.txCat === 's:' + s.id ? ' selected' : ''}>${esc(s.name)}</option>`).join('')}</optgroup>`).join('');
+  const cats = [{v: '', l: 'All categories'}];
+  for (const m of state.mains) { const g = m.icon + ' ' + m.name; cats.push({v: 'm:' + m.id, l: 'All of ' + m.name, g, icon: m.icon}); for (const x of state.subs) if (x.mainId === m.id) cats.push({v: 's:' + x.id, l: x.name, g, icon: m.icon, color: m.color}); }
   return `${titleHTML('transactions')}
   <div class="rowline" style="justify-content:space-between">${ui.txAll ? '<b>All months</b>' : monthNav()}<label class="check"><input type="checkbox" id="tx-all" data-c="txAll"${ui.txAll ? ' checked' : ''}> Show all months</label></div>
   <section class="sec">
     <div class="tools"><div class="search">${I.search}<input class="in" id="tx-q" type="search" placeholder="Search merchant, note, category" value="${esc(ui.txq)}" data-i="txq" aria-label="Search transactions"></div>
-      <select class="sel" id="tx-cat" data-c="txCat" aria-label="Filter by category" style="flex:0 1 220px"><option value="">All categories</option>${cats}</select>
+      ${pick('tx-cat', ui.txCat, cats, {c: 'txCat', title: 'Filter by category', style: 'flex:0 1 220px'})}
       <button class="btn pri" data-a="newTx">${I.plus} New</button></div>
     <div class="views">${[['all', 'All'], ['expense', 'Expenses'], ['income', 'Income'], ['debt', 'Debt payments']].map(([v, l]) => `<button class="${ui.txType === v ? 'on' : ''}" data-a="txType" data-v="${v}">${l}</button>`).join('')}</div>
     <div id="tx-list">${txListHTML()}</div>
@@ -1004,10 +1060,10 @@ function mTx() {
     <label class="fld"><span>Amount (${esc(sym())})</span><input class="in amount num" id="f-amount" name="amount" type="number" inputmode="decimal" min="0" step="any" placeholder="0" value="${esc(d.amount)}" autofocus></label>
     ${modal.err ? `<div class="err">${modal.err}</div>` : ''}
     <div class="fgrid">
-      ${isDebt ? `<label class="fld"><span>Debt</span><select class="sel" id="f-debt" name="debtId">${state.debts.length ? opts(state.debts.map(x => [x.id, x.name]), d.debtId) : '<option value="">Add a debt first</option>'}</select></label>`
-        : `<label class="fld"><span>Category</span><select class="sel" id="f-sub" name="subId">${subMap.has(d.subId) ? '' : '<option value="" selected>Uncategorized</option>'}${subOptions(d.type, d.subId)}</select></label>`}
+      ${isDebt ? `<label class="fld"><span>Debt</span>${pick('f-debt', d.debtId, state.debts.length ? state.debts.map(x => ({v: x.id, l: x.name})) : [{v: '', l: 'Add a debt first'}], {name: 'debtId', title: 'Debt'})}</label>`
+        : `<label class="fld"><span>Category</span>${pick('f-sub', d.subId, [...(subMap.has(d.subId) ? [] : [{v: '', l: 'Uncategorized', icon: '📄'}]), ...subPickOpts(d.type)], {name: 'subId', title: 'Category'})}</label>`}
       <label class="fld"><span>Date</span><input class="in" id="f-date" name="date" type="date" value="${esc(d.date)}"></label>
-      <label class="fld"><span>Payment mode</span><select class="sel" id="f-mode" name="mode">${opts(MODES, d.mode)}</select></label>
+      <label class="fld"><span>Payment mode</span>${pick('f-mode', d.mode, flat(MODES), {name: 'mode', title: 'Payment mode'})}</label>
       <label class="fld"><span>${d.type === 'income' ? 'Source' : 'Merchant or description'}</span><input class="in" id="f-desc" name="desc" type="text" maxlength="80" value="${esc(d.desc)}" placeholder="${isDebt ? 'Optional' : d.type === 'income' ? 'e.g. Salary credit' : 'e.g. Weekly groceries'}"></label>
     </div>
     <label class="fld"><span>Notes</span><input class="in" id="f-notes" name="notes" type="text" maxlength="140" value="${esc(d.notes)}" placeholder="Optional"></label>
@@ -1034,7 +1090,7 @@ function mCats() {
   const ed = modal.edit, arm = modal.arm;
   const editor = m => `<form class="editor" data-f="main" data-editing>
     <div class="fgrid"><label class="fld"><span>Name</span><input class="in" id="c-name" name="name" maxlength="40" value="${esc(ed.name)}" autofocus></label>
-    <label class="fld"><span>Tracks</span><select class="sel" id="c-type" name="type">${opts([['expense', 'Spending'], ['income', 'Income']], ed.type)}</select></label></div>
+    <label class="fld"><span>Tracks</span>${pick('c-type', ed.type, flat([['expense', 'Spending'], ['income', 'Income']]), {name: 'type', title: 'Tracks'})}</label></div>
     <div class="fld"><span>Icon</span><div class="picks">${EMOJI.map(e => `<button type="button" class="${ed.icon === e ? 'on' : ''}" data-a="pick" data-k="icon" data-v="${e}" aria-label="Icon ${e}">${e}</button>`).join('')}</div></div>
     <div class="fld"><span>Color</span><div class="picks">${COLORS.map(c => `<button type="button" class="c-${c}${ed.color === c ? ' on' : ''}" data-a="pick" data-k="color" data-v="${c}" aria-label="${c}"><span class="sw"></span></button>`).join('')}</div></div>
     <div class="rowline"><button class="btn pri" type="submit">Save</button><button class="btn txt" type="button" data-a="cancelEdit">Cancel</button></div></form>`;
@@ -1051,7 +1107,7 @@ function mCats() {
       ${open ? `<div class="cat-b">${subs.map(s => {
         if (ed?.kind === 'sub' && ed.id === s.id) return `<form class="inline" data-f="sub" data-editing style="padding:3px 0"><input class="in" id="s-name" name="name" maxlength="40" value="${esc(s.name)}" autofocus aria-label="Subcategory name"><button class="btn pri" type="submit">Save</button><button class="btn txt" type="button" data-a="cancelEdit">Cancel</button></form>`;
         if (arm === 'sub:' + s.id) { const c = state.tx.filter(t => t.subId === s.id).length; return `<div class="callout bad" data-editing><div class="b"><div>Delete <b>${esc(s.name)}</b>? ${c ? `${c} transactions become Uncategorized.` : 'No transactions use it.'}</div><div class="rowline"><button class="btn" data-a="delSub" data-id="${s.id}">Delete</button><button class="btn txt" data-a="arm" data-v="">Keep it</button></div></div></div>`; }
-        return `<div class="sub"><span class="nm">${esc(s.name)}</span>${s.bucket === 'income' ? '<span class="tag c-green">Income</span>' : `<select class="sel" id="bk-${s.id}" data-c="subBucket" data-id="${s.id}" aria-label="Bucket for ${esc(s.name)}">${opts([['needs', 'Needs'], ['wants', 'Wants'], ['savings', 'Savings']], s.bucket)}</select>`}<button class="ib" data-a="editSub" data-id="${s.id}" aria-label="Rename ${esc(s.name)}">${I.edit}</button>${s.sys ? '<span class="ib" title="Used by debt payments"></span>' : `<button class="ib" data-a="arm" data-v="sub:${s.id}" aria-label="Delete ${esc(s.name)}">${I.trash}</button>`}</div>`;
+        return `<div class="sub"><span class="nm">${esc(s.name)}</span>${s.bucket === 'income' ? '<span class="tag c-green">Income</span>' : `${pick('bk-' + s.id, s.bucket, flat([['needs', 'Needs'], ['wants', 'Wants'], ['savings', 'Savings']]), {c: 'subBucket', data: {id: s.id}, title: 'Bucket for ' + s.name})}`}<button class="ib" data-a="editSub" data-id="${s.id}" aria-label="Rename ${esc(s.name)}">${I.edit}</button>${s.sys ? '<span class="ib" title="Used by debt payments"></span>' : `<button class="ib" data-a="arm" data-v="sub:${s.id}" aria-label="Delete ${esc(s.name)}">${I.trash}</button>`}</div>`;
       }).join('')}
         <form class="inline" data-f="addSub" data-id="${m.id}" style="padding-top:4px"><input class="in" id="add-${m.id}" name="name" maxlength="40" placeholder="Add a subcategory" aria-label="New subcategory in ${esc(m.name)}"><button class="btn" type="submit">Add</button></form></div>` : ''}
     </div>`;
@@ -1062,9 +1118,9 @@ function mCats() {
 function mPresets() {
   return `${mHead('Quick log presets', '⚡')}<div class="modal-b"><p class="muted small">One tap on the Overview logs the amount to the category, dated today. Reorder with the arrows.</p>
   <div>${state.presets.map((p, i) => `<div class="preset">
-    <select class="sel" id="pi-${p.id}" data-c="preset" data-k="icon" data-id="${p.id}" aria-label="Icon">${opts(EMOJI.includes(p.icon) ? EMOJI : [p.icon, ...EMOJI], p.icon)}</select>
+    ${pick('pi-' + p.id, p.icon, flat(EMOJI.includes(p.icon) ? EMOJI : [p.icon, ...EMOJI]), {c: 'preset', data: {id: p.id, k: 'icon'}, title: 'Icon', grid: true})}
     <input class="in" id="pl-${p.id}" data-c="preset" data-k="label" data-id="${p.id}" value="${esc(p.label)}" maxlength="24" aria-label="Label">
-    <select class="sel" id="ps-${p.id}" data-c="preset" data-k="subId" data-id="${p.id}" aria-label="Category">${subOptions('expense', p.subId)}</select>
+    ${pick('ps-' + p.id, p.subId, subPickOpts('expense'), {c: 'preset', data: {id: p.id, k: 'subId'}, title: 'Category'})}
     <input class="in num" id="pa-${p.id}" data-c="preset" data-k="amount" data-id="${p.id}" type="number" inputmode="decimal" min="0" step="any" value="${p.amount}" aria-label="Amount">
     <span class="mv"><button class="ib" data-a="movePreset" data-id="${p.id}" data-v="-1" aria-label="Move up"${i === 0 ? ' disabled' : ''}>${I.up}</button><button class="ib" data-a="movePreset" data-id="${p.id}" data-v="1" aria-label="Move down"${i === state.presets.length - 1 ? ' disabled' : ''}>${I.down}</button><button class="ib" data-a="delPreset" data-id="${p.id}" aria-label="Delete preset">${I.trash}</button></span></div>`).join('') || '<div class="empty">No presets. Add one below.</div>'}</div></div>
   <div class="modal-f"><button class="btn sp" data-a="addPreset">${I.plus} Add preset</button><button class="btn pri" data-a="close">Done</button></div>`;
@@ -1086,7 +1142,7 @@ function mDebt() {
   const d = modal.draft;
   return `<form class="form" data-f="debt" novalidate>${mHead(d.id ? 'Edit debt' : 'Add a debt')}<div class="modal-b">
     <div class="fgrid"><label class="fld"><span>Name</span><input class="in" id="g-name" name="name" maxlength="40" value="${esc(d.name)}" placeholder="e.g. Travel card" autofocus></label>
-    <label class="fld"><span>Type</span><select class="sel" id="g-kind" name="kind">${opts(DEBT_KINDS, d.kind)}</select></label>
+    <label class="fld"><span>Type</span>${pick('g-kind', d.kind, flat(DEBT_KINDS), {name: 'kind', title: 'Debt type'})}</label>
     <label class="fld"><span>Balance owed (${esc(sym())})</span><input class="in num" id="g-bal" name="bal" type="number" inputmode="decimal" min="0" step="any" value="${esc(d.bal)}"></label>
     <label class="fld"><span>Interest rate (% a year)</span><input class="in num" id="g-apr" name="apr" type="number" inputmode="decimal" min="0" step="any" value="${esc(d.apr)}"></label>
     <label class="fld"><span>Minimum payment or EMI, monthly</span><input class="in num" id="g-min" name="min" type="number" inputmode="decimal" min="0" step="any" value="${esc(d.min)}"></label>
@@ -1098,7 +1154,7 @@ function mDebt() {
 function mSettings() {
   const th = state.settings.theme, arm = modal.arm, hosted = !!$('link[rel="manifest"]');
   return `${mHead('Settings & backup', '⚙️')}<div class="modal-b"><div>
-    <div class="setting"><div><b>Currency</b><small>Changes the symbol and number format. Amounts are not converted.</small></div><select class="sel" id="set-cur" data-c="currency" aria-label="Currency">${opts(Object.entries(CUR).map(([k, v]) => [k, `${k} · ${v[0]}`]), state.settings.currency)}</select></div>
+    <div class="setting"><div><b>Currency</b><small>Changes the symbol and number format. Amounts are not converted.</small></div>${pick('set-cur', state.settings.currency, flat(Object.entries(CUR).map(([k, v]) => [k, k + ' · ' + v[0]])), {c: 'currency', title: 'Currency'})}</div>
     <div class="setting"><div><b>Appearance</b><small>System follows your device.</small></div><div class="seg">${['light', 'dark', 'system'].map(t => `<button class="${th === t ? 'on' : ''}" data-a="theme" data-v="${t}">${t[0].toUpperCase() + t.slice(1)}</button>`).join('')}</div></div>
     ${hosted ? `<div class="setting"><div><b>Install as an app</b><small>${installEvt ? 'Adds Pocket to your home screen. It works offline once installed.' : 'Use your browser menu: Install app, or Add to Home Screen.'}</small></div>${installEvt ? '<button class="btn" data-a="install">Install</button>' : ''}</div>` : ''}
     ${syncSettings(arm)}
@@ -1151,7 +1207,7 @@ function softRender() { if (pointerDown) pendingRender = true; else setTimeout(r
 function flushRender() { if (pendingRender) { pendingRender = false; render(); } }
 function renderModal(keepFocus) {
   const root = $('#modal'), sc = $('.modal-b', root)?.scrollTop || 0;
-  if (!modal) { root.innerHTML = ''; root.hidden = true; document.body.classList.remove('lock'); return; }
+  if (!modal) { root.innerHTML = ''; root.hidden = true; document.body.classList.toggle('lock', !!menu); return; }
   index();
   root.hidden = false; document.body.classList.add('lock');
   const wide = ['cats', 'presets', 'detail', 'settings'].includes(modal.type);
@@ -1161,7 +1217,7 @@ function renderModal(keepFocus) {
   const e = $('[data-editing]', root); if (e) e.scrollIntoView({block: 'nearest', behavior: 'smooth'});
 }
 const open = m => { modal = m; renderModal(); };
-function close() { modal = modal?.back || null; renderModal(); }
+function close() { menu = null; renderMenu(); modal = modal?.back || null; renderModal(); }
 function toast(msg, undo) {
   const el = $('#toast'); toastUndo = undo || null;
   el.innerHTML = `<div class="toast" role="status"><span>${esc(msg)}</span>${undo ? '<button data-a="undo">Undo</button>' : ''}</div>`;
@@ -1247,6 +1303,23 @@ const A = {
   payDebt(el) { const d = state.debts.find(x => x.id === el.dataset.id); open({type: 'tx', draft: newDraft({type: 'debt', debtId: d.id, amount: String(Math.min(d.min, debtBal(d)) || ''), mode: 'Net Banking'})}); },
 
   openSettings() { open({type: 'settings'}); },
+  openPick(el) {
+    const r = el.getBoundingClientRect(), wide = innerWidth > 820; let style = '';
+    if (wide) {
+      const w = Math.max(r.width, 250), left = Math.max(12, Math.min(r.left, innerWidth - w - 12)), below = innerHeight - r.bottom - 16;
+      style = below >= 260 || below >= r.top ? `left:${left}px;top:${r.bottom + 4}px;width:${w}px;max-height:${Math.min(420, below)}px` : `left:${left}px;bottom:${innerHeight - r.top + 4}px;width:${w}px;max-height:${Math.min(420, r.top - 16)}px`;
+    }
+    menu = {id: el.id, q: '', style}; renderMenu();
+  },
+  closeMenu, menuScrim(el, e) { if (e.target === el) closeMenu(); },
+  pickOpt(el) {
+    const id = menu.id, p = PICKS[id], opt = p.options.find(x => String(x.v) === el.dataset.v);
+    closeMenu(); if (!opt) return;
+    p.value = opt.v; const b = document.getElementById(id), h = document.getElementById(id + '-v');
+    if (b) { $('.pick-l', b).innerHTML = pickLabel(opt); b.setAttribute('aria-label', (p.o.title || 'Choose') + ': ' + opt.l); }
+    if (h) h.value = opt.v;
+    if (p.o.c) C[p.o.c]({value: opt.v, dataset: p.o.data || {}});
+  },
   syncNow() { syncNow(); },
   syncOff() { sync = null; storeSync(); clearTimeout(syncTimer); syncState.err = ''; modal.arm = null; render(); renderModal(true); toast('Sync disconnected on this device'); },
   async export() {
@@ -1329,7 +1402,8 @@ const C = {
 const N = {
   txq(el) { ui.txq = el.value; $('#tx-list').innerHTML = txListHTML(); },
   detailQ(el) { modal.q = el.value; $('#d-list').innerHTML = detailList(); },
-  autoIncome(el) { modal.income = el.value; $('#a-prev').innerHTML = autoPreview(); }
+  autoIncome(el) { modal.income = el.value; $('#a-prev').innerHTML = autoPreview(); },
+  pickQ(el) { menu.q = el.value; $('#menu-list').innerHTML = menuList(); }
 };
 
 /* ───────── wiring ───────── */
@@ -1342,10 +1416,11 @@ document.addEventListener('change', e => { const fn = C[e.target.dataset?.c]; if
 document.addEventListener('input', e => { const fn = N[e.target.dataset?.i]; if (fn) fn(e.target); });
 document.addEventListener('keydown', e => {
   const t = e.target, typing = /^(INPUT|SELECT|TEXTAREA)$/.test(t.tagName);
+  if (e.key === 'Escape' && menu) { e.preventDefault(); return closeMenu(); }
   if (e.key === 'Escape' && modal) { e.preventDefault(); return close(); }
   if ((e.key === 'Enter' || e.key === ' ') && (t.matches?.('[role="button"][data-a]') || t.matches?.('label.btn'))) { e.preventDefault(); return t.click(); }
   if (e.key === 'Enter' && t.matches?.('[data-c="limit"],[data-c="extra"]')) return t.blur();
-  if (!typing && !modal && !e.metaKey && !e.ctrlKey && !e.altKey && e.key.toLowerCase() === 'n') { e.preventDefault(); A.newTx(); }
+  if (!typing && !modal && !menu && !e.metaKey && !e.ctrlKey && !e.altKey && e.key.toLowerCase() === 'n') { e.preventDefault(); A.newTx(); }
 });
 window.addEventListener('beforeinstallprompt', e => { e.preventDefault(); installEvt = e; if (modal?.type === 'settings') renderModal(true); });
 if ($('link[rel="manifest"]') && 'serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
