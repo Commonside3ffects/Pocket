@@ -1393,7 +1393,7 @@ function vOverview() {
     <div class="dots" aria-hidden="true">${[0, 1, 2, 3].map(i => `<i class="${i === ui.slide ? 'on' : ''}"></i>`).join('')}</div>
   </section>
   <section class="sec"><div class="sec-h"><h2>Quick log</h2><button class="btn txt" data-a="openPresets">Edit presets</button></div>
-    <div class="chips"><button class="chip ink" data-a="pasteSms">${glyph('📋')}Paste SMS</button>${state.presets.map(p => `<button class="chip" data-a="quick" data-id="${p.id}">${glyph(p.icon)}${esc(p.label)}<b class="num">${fmt(p.amount)}</b></button>`).join('') || '<span class="muted">No presets yet.</span>'}</div>
+    <div class="chips"><button class="chip ink" data-a="pasteSms">${glyph('📋')}Drop in</button>${state.presets.map(p => `<button class="chip" data-a="quick" data-id="${p.id}">${glyph(p.icon)}${esc(p.label)}<b class="num">${fmt(p.amount)}</b></button>`).join('') || '<span class="muted">No presets yet.</span>'}</div>
   </section>
   <div class="cols">
     <section class="sec"><div class="sec-h"><h2>Where it went</h2><div class="seg"><button class="${ui.breakdown === 'main' ? 'on' : ''}" data-a="breakdown" data-v="main">Categories</button><button class="${ui.breakdown === 'bucket' ? 'on' : ''}" data-a="breakdown" data-v="bucket">50/30/20</button></div></div>
@@ -1442,7 +1442,7 @@ function vTransactions() {
   <section class="sec">
     <div class="tools"><div class="search">${I.search}<input class="in" id="tx-q" type="search" placeholder="Search" value="${esc(ui.txq)}" data-i="txq" aria-label="Search transactions"></div>
       ${pick('tx-cat', ui.txCat, cats, {c: 'txCat', title: 'Filter by category', style: 'flex:0 1 200px'})}
-      <button class="ib sq" data-a="pasteSms" aria-label="Paste SMS" title="Paste SMS">${glyph('📋', 18)}</button></div>
+      <button class="ib sq" data-a="pasteSms" aria-label="Drop in a bank SMS" title="Drop in">${glyph('📋', 18)}</button></div>
     <div class="views">${[['all', 'All'], ['expense', 'Expenses'], ['income', 'Income'], ['debt', 'Debt & cards']].map(([v, l]) => `<button class="${ui.txType === v ? 'on' : ''}" data-a="txType" data-v="${v}">${l}</button>`).join('')}</div>
     <div id="tx-list">${txListHTML()}</div>
   </section>`;
@@ -1647,7 +1647,7 @@ function parseSMS(raw) {
 }
 function openSmsDraft(r) { open({type: 'tx', sms: r.known ? 'known' : 'new', draft: newDraft({type: r.type, amount: String(r.amount), date: r.date, desc: r.desc, mode: r.mode, subId: r.subId})}); }
 function mSms() {
-  return `${mHead('Paste bank SMS', '📋')}<div class="modal-b">
+  return `${mHead('Drop in', '📋')}<div class="modal-b">
     <p class="small muted">Long-press the bank message, tap Copy, then paste it below.</p>
     <textarea class="in" id="sms-text" rows="5" placeholder="e.g. Debited Rs 450.00 from a/c XX1234 on 26-10-2026 via UPI to SWIGGY" aria-label="Bank SMS" autofocus>${esc(modal.text || '')}</textarea>
     ${modal.err ? `<div class="err">${esc(modal.err)}</div>` : ''}
