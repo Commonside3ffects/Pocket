@@ -240,6 +240,7 @@ textarea.in{resize:vertical;min-height:64px;font-family:var(--mono);font-size:12
 .search .in{padding-left:30px}
 .txs{container-type:inline-size;border-top:1px solid var(--line)}
 .tx{display:grid;grid-template-columns:62px minmax(0,1fr) minmax(0,170px) 92px minmax(96px,auto) 28px;gap:4px 10px;align-items:center;padding:6px 6px;border-bottom:1px solid var(--line);cursor:pointer;min-height:40px}
+.txs.byday .tx{grid-template-columns:minmax(0,1fr) minmax(0,170px) 92px minmax(96px,auto) 28px}
 .tx:hover{background:var(--hover)}
 .tx-date,.tx-mode{color:var(--fg2);font-size:12.5px;white-space:nowrap}
 .tx-mode{overflow:hidden;text-overflow:ellipsis}
@@ -257,9 +258,15 @@ textarea.in{resize:vertical;min-height:64px;font-family:var(--mono);font-size:12
 @container (max-width:620px){
   .tx{grid-template-columns:auto minmax(0,1fr) auto;grid-template-areas:"d d a" "dt c x";padding-block:9px}
   .tx-desc{grid-area:d}.tx-amt{grid-area:a}.tx-date{grid-area:dt}.tx-cat{grid-area:c}.tx-act{grid-area:x}
+  .txs.byday .tx{grid-template-columns:minmax(0,1fr) auto;grid-template-areas:"d a" "c x"}
   .tx-mode{display:none}.tx-desc .n{display:none}.tx-act .ib{opacity:1}
 }
 .tx-foot{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;padding:8px 6px;color:var(--fg2);font-size:12.5px}
+.day-h{display:flex;justify-content:space-between;align-items:baseline;gap:10px;padding:14px 6px 5px;font-size:12.5px;font-weight:600;color:var(--fg2);border-bottom:1px solid var(--line);background:var(--pop)}
+#view .day-h{position:sticky;top:calc(44px + env(safe-area-inset-top,0px));background:var(--bg);z-index:2}
+.day-h .num{font-weight:500}
+.txs.byday{border-top:0}
+.txs.byday .tx-date{display:none}
 .newrow{display:flex;align-items:center;gap:6px;padding:8px 6px;color:var(--fg3);width:100%;border-bottom:1px solid var(--line)}
 .newrow:hover{background:var(--hover);color:var(--fg2)}
 .check{display:inline-flex;align-items:center;gap:6px;color:var(--fg2);cursor:pointer}
@@ -1084,9 +1091,24 @@ function filteredTx() {
   if (q) list = list.filter(t => { const s = subOf(t.subId); return [t.desc, t.notes, t.mode, s.name, mainOf(s).name, t.amount, t.cardId ? cardOf(t.cardId)?.name : '', t.type === 'advance' ? 'card cash' : ''].join(' ').toLowerCase().includes(q); });
   return list.sort(byNewest);
 }
+// A list of transactions grouped under a header for each day, newest first.
+function dayLabel(d) {
+  const t = today(), y = ymd(new Date(Date.now() - 864e5)), [yy, mm, dd] = d.split('-').map(Number), dt = new Date(yy, mm - 1, dd);
+  const base = dt.toLocaleDateString('en-GB', {weekday: 'short', day: 'numeric', month: 'short', ...(yy !== new Date().getFullYear() ? {year: 'numeric'} : {})});
+  return d === t ? 'Today · ' + base : d === y ? 'Yesterday · ' + base : base;
+}
+function txByDay(list) {
+  let out = '', i = 0;
+  while (i < list.length) {
+    const d = list[i].date, day = []; while (i < list.length && list[i].date === d) day.push(list[i++]);
+    const isIn = t => t.type === 'income' || t.type === 'advance', o = sum(day.filter(t => !isIn(t)), t => t.amount), n = sum(day.filter(isIn), t => t.amount);
+    out += `<div class="day-h"><span>${dayLabel(d)}</span><span class="num">${[n ? `<span class="pos">+${fmt(n)}</span>` : '', o ? `−${fmt(o)}` : ''].filter(Boolean).join(' · ')}</span></div>${day.map(txRow).join('')}`;
+  }
+  return out;
+}
 function txListHTML() {
   const list = filteredTx(), isIn = t => t.type === 'income' || t.type === 'advance', inc = sum(list.filter(isIn), t => t.amount), out = sum(list.filter(t => !isIn(t)), t => t.amount);
-  return `<div class="txs">${list.map(txRow).join('')}<button class="newrow" data-a="newTx">${I.plus} New</button></div>
+  return `<div class="txs byday">${txByDay(list)}<button class="newrow" data-a="newTx">${I.plus} New</button></div>
   ${list.length ? `<div class="tx-foot num"><span>${list.length} ${list.length === 1 ? 'transaction' : 'transactions'}</span><span>In ${fmt(inc)} · Out ${fmt(out)}</span></div>` : `<div class="empty">Nothing matches. Clear the search or filters, or switch month.</div>`}`;
 }
 function vTransactions() {
@@ -1340,7 +1362,7 @@ function detailList() {
   if (q) list = list.filter(t => [t.desc, t.notes, subOf(t.subId).name, t.mode].join(' ').toLowerCase().includes(q));
   return `<div class="tx-foot num" style="padding-inline:0"><span>${list.length} ${list.length === 1 ? 'transaction' : 'transactions'}${q ? ' found' : ''}</span><span>Total ${fmt(total)}</span></div>
   ${!modal.sub && all - total > 0.5 ? '<p class="small muted" style="padding-bottom:8px">Card payments count here only beyond what went onto cards this month, so card spending is not counted twice.</p>' : ''}
-  ${list.length ? `<div class="txs">${list.sort(byNewest).map(txRow).join('')}</div>` : `<div class="empty">${q ? 'Nothing matches that search.' : 'Nothing logged here this month.'}</div>`}`;
+  ${list.length ? `<div class="txs byday">${txByDay(list.sort(byNewest))}</div>` : `<div class="empty">${q ? 'Nothing matches that search.' : 'Nothing logged here this month.'}</div>`}`;
 }
 // Subcategory totals inside a category: tap one to narrow the list and the total to it.
 function detailSubs() {
