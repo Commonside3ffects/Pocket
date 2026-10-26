@@ -1713,7 +1713,12 @@ document.addEventListener('keydown', e => {
   if (!typing && !modal && !menu && !e.metaKey && !e.ctrlKey && !e.altKey && e.key.toLowerCase() === 'n') { e.preventDefault(); A.newTx(); }
 });
 window.addEventListener('beforeinstallprompt', e => { e.preventDefault(); installEvt = e; if (modal?.type === 'settings') renderModal(true); });
-if ($('link[rel="manifest"]') && 'serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
+if ($('link[rel="manifest"]') && 'serviceWorker' in navigator) {
+  // When a newer version takes over, reload once so the update shows straight away.
+  const hadSW = !!navigator.serviceWorker.controller; let reloaded = false;
+  navigator.serviceWorker.addEventListener('controllerchange', () => { if (hadSW && !reloaded) { reloaded = true; location.reload(); } });
+  navigator.serviceWorker.register('sw.js').then(reg => document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') reg.update().catch(() => {}); })).catch(() => {});
+}
 
 state = load(); resetShadow(); sync = hosted() ? loadSync() : null; if (needStore) store();
 window.addEventListener('online', () => { if (sync) syncNow(); });

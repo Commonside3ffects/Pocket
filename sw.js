@@ -1,11 +1,21 @@
 // Offline cache for Pocket. Bump VERSION whenever you upload a new index.html.
-const VERSION = 'pocket-16';
+const VERSION = 'pocket-17';
 const FILES = ['./', 'index.html', 'manifest.webmanifest', 'icon.svg', 'icon-192.png', 'icon-512.png'];
-self.addEventListener('install', e => e.waitUntil(caches.open(VERSION).then(c => c.addAll(FILES)).then(() => self.skipWaiting())));
+// cache: 'reload' skips the browser's own cache, so a new version never stores the old page.
+self.addEventListener('install', e => e.waitUntil(caches.open(VERSION).then(c => c.addAll(FILES.map(f => new Request(f, {cache: 'reload'})))).then(() => self.skipWaiting())));
 self.addEventListener('activate', e => e.waitUntil(caches.keys().then(ks => Promise.all(ks.filter(k => k !== VERSION).map(k => caches.delete(k)))).then(() => self.clients.claim())));
 self.addEventListener('fetch', e => {
-  if (e.request.method !== 'GET' || new URL(e.request.url).origin !== self.location.origin) return;
-  e.respondWith(caches.match(e.request, {ignoreSearch: true}).then(hit => hit || fetch(e.request).then(res => {
-    const copy = res.clone(); caches.open(VERSION).then(c => c.put(e.request, copy)); return res;
+  const req = e.request;
+  if (req.method !== 'GET' || new URL(req.url).origin !== self.location.origin) return;
+  // The page itself: fetch fresh when online, fall back to the saved copy offline.
+  if (req.mode === 'navigate' || /\/(index\.html)?$/.test(new URL(req.url).pathname)) {
+    e.respondWith(fetch(req, {cache: 'no-cache'}).then(res => {
+      if (res.ok) { const copy = res.clone(); caches.open(VERSION).then(c => c.put('index.html', copy)); }
+      return res;
+    }).catch(() => caches.match('index.html')));
+    return;
+  }
+  e.respondWith(caches.match(req, {ignoreSearch: true}).then(hit => hit || fetch(req).then(res => {
+    const copy = res.clone(); caches.open(VERSION).then(c => c.put(req, copy)); return res;
   }).catch(() => caches.match('index.html'))));
 });
