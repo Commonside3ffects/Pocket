@@ -756,7 +756,13 @@ textarea.in{border-radius:18px;font-family:var(--mono);font-size:13px}
   .tabs button>span:last-child::after{content:"";width:6px;height:4px;border-radius:2px;background:transparent;transition:width .2s,background-color .2s}
   .tabs button.on{color:var(--ink);font-weight:700}
   .tabs button.on>span:last-child::after{background:var(--hot);width:22px}
-  .fab{right:16px;bottom:calc(78px + env(safe-area-inset-bottom,0px))}
+  /* Floating pill bar: icons only, the current page sits in a soft pill */
+  .tabs{left:16px;right:16px;bottom:calc(12px + env(safe-area-inset-bottom,0px));padding:6px;gap:4px;border-radius:999px;border:1.5px solid var(--hair);box-shadow:0 8px 28px rgba(0,0,0,.14)}
+  .tabs button{padding:0;min-height:52px;justify-content:center;border-radius:999px;transition:background-color .2s}
+  .tabs button>span:last-child{display:none}
+  .tabs button>span:first-child{font-size:22px;line-height:1}
+  .tabs button.on{background:color-mix(in srgb,var(--hot) 22%,var(--card))}
+  .fab{right:16px;bottom:calc(84px + env(safe-area-inset-bottom,0px))}
   .toast{top:calc(58px + env(safe-area-inset-top,0px))}
   .stats{grid-template-columns:repeat(2,minmax(0,1fr))}
   .stat:nth-child(n+3){border-top:0}
@@ -764,8 +770,8 @@ textarea.in{border-radius:18px;font-family:var(--mono);font-size:13px}
   .modal,.modal.wide{border-radius:32px 32px 0 0}
   .modal::before{content:"";display:block;width:44px;height:5px;border-radius:3px;background:var(--line2);margin:10px auto 0}
 }
-@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .tabs{box-shadow:0 -4px 18px rgba(0,0,0,.35)}}
-:root[data-theme="dark"] .tabs{box-shadow:0 -4px 18px rgba(0,0,0,.35)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .tabs{box-shadow:0 8px 28px rgba(0,0,0,.45)}}
+:root[data-theme="dark"] .tabs{box-shadow:0 8px 28px rgba(0,0,0,.45)}
 </style>
 <div class="app">
   <aside class="side" id="side" aria-label="Pages"></aside>
@@ -1349,7 +1355,7 @@ function topHTML() {
   return `<div class="crumb"><span class="app-name">${LOGO}<b>Pocket</b></span><span class="here">Pocket</span><span class="sl">/</span><span class="here"><b>${glyph(p[1], 14)} ${p[2]}</b></span></div>
   <div class="top-act">${sync ? (l => `<button class="badge ${l[0]}" data-a="openSettings" title="${esc(l[2])}">${l[1]}</button>`)(syncLabel()) : ''}<button class="ib" data-a="go" data-v="guide" aria-label="Money guide" title="Money guide">${I.book}</button><button class="ib" data-a="openCats" aria-label="Categories" title="Categories">${I.tag}</button><button class="ib" data-a="openSettings" aria-label="Settings and backup" title="Settings &amp; backup">${I.gear}</button></div>`;
 }
-const tabsHTML = () => MAIN.map(p => `<button class="${ui.view === p[0] ? 'on' : ''}" data-a="go" data-v="${p[0]}"><span>${glyph(p[1], 20)}</span><span>${p[0] === 'debt' ? 'Debt' : p[0] === 'guide' ? 'Guide' : p[2]}</span></button>`).join('');
+const tabsHTML = () => MAIN.map(p => `<button class="${ui.view === p[0] ? 'on' : ''}" data-a="go" data-v="${p[0]}" aria-label="${p[2]}"${ui.view === p[0] ? ' aria-current="page"' : ''}><span>${glyph(p[1], 20)}</span><span>${p[0] === 'debt' ? 'Debt' : p[0] === 'guide' ? 'Guide' : p[2]}</span></button>`).join('');
 
 /* ───────── overview ───────── */
 function breakdown(mk, mode) {
