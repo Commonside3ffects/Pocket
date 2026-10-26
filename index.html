@@ -739,6 +739,11 @@ textarea.in{border-radius:18px;font-family:var(--mono);font-size:13px}
   body{height:100%;overflow:hidden;overscroll-behavior:none}
   .app{height:100%;min-height:0}
   .main{height:100%;overflow-y:auto;overscroll-behavior-y:contain}
+  /* .main already sits below the html safe-area padding, so sticky offsets inside it skip the inset */
+  .top{top:0}
+  .top::before{display:none}
+  #view .day-h{top:44px}
+  #view .txs.byday .day-h{top:54px}
 }
 /* + button */
 .fab{width:54px;height:54px;background:var(--hot);color:var(--on-hot);border:2px solid var(--outline);box-shadow:0 4px 0 var(--lift);transition:transform .1s,box-shadow .1s}
