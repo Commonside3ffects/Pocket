@@ -1,5 +1,5 @@
 // Offline cache for Pocket. Bump VERSION whenever you upload a new index.html.
-const VERSION = 'pocket-21';
+const VERSION = 'pocket-22';
 const FILES = ['./', 'index.html', 'manifest.webmanifest', 'icon.svg', 'icon-192.png', 'icon-512.png'];
 // cache: 'reload' skips the browser's own cache, so a new version never stores the old page.
 self.addEventListener('install', e => e.waitUntil(caches.open(VERSION).then(c => c.addAll(FILES.map(f => new Request(f, {cache: 'reload'})))).then(() => self.skipWaiting())));
@@ -10,9 +10,9 @@ self.addEventListener('fetch', e => {
   // The page itself: fetch fresh when online, fall back to the saved copy offline.
   if (req.mode === 'navigate' || /\/(index\.html)?$/.test(new URL(req.url).pathname)) {
     e.respondWith(fetch(req, {cache: 'no-cache'}).then(res => {
-      if (res.ok) { const copy = res.clone(); caches.open(VERSION).then(c => c.put('index.html', copy)); }
+      if (res.ok) { const copy = res.clone(); caches.open(VERSION).then(c => c.put(req, copy)); }
       return res;
-    }).catch(() => caches.match('index.html')));
+    }).catch(() => caches.match(req, {ignoreSearch: true}).then(hit => hit || caches.match('index.html'))));
     return;
   }
   e.respondWith(caches.match(req, {ignoreSearch: true}).then(hit => hit || fetch(req).then(res => {
