@@ -979,7 +979,7 @@ function vOverview() {
     <div class="stat"><label>Savings rate</label><b class="num ${s.rate !== null && s.rate < 0 ? 'neg' : ''}">${s.rate === null ? '—' : Math.round(s.rate) + '%'}</b><small>${s.rate === null ? 'Log income to see this' : s.rate >= 20 ? 'At or above the 20% target' : 'Target is 20%'}</small></div>
   </section>
   <section class="sec"><div class="sec-h"><h2>Quick log</h2><button class="btn txt" data-a="openPresets">Edit presets</button></div>
-    <div class="chips">${state.presets.map(p => `<button class="chip" data-a="quick" data-id="${p.id}"><span>${p.icon}</span>${esc(p.label)}<b class="num">${fmt(p.amount)}</b></button>`).join('') || '<span class="muted">No presets yet.</span>'}</div>
+    <div class="chips"><button class="chip" data-a="pasteSms"><span>📋</span>Paste SMS</button>${state.presets.map(p => `<button class="chip" data-a="quick" data-id="${p.id}"><span>${p.icon}</span>${esc(p.label)}<b class="num">${fmt(p.amount)}</b></button>`).join('') || '<span class="muted">No presets yet.</span>'}</div>
   </section>
   <div class="cols">
     <section class="sec"><div class="sec-h"><h2>50/30/20 health</h2></div><div class="list">${bks}</div></section>
@@ -1014,7 +1014,7 @@ function vTransactions() {
   <section class="sec">
     <div class="tools"><div class="search">${I.search}<input class="in" id="tx-q" type="search" placeholder="Search merchant, note, category" value="${esc(ui.txq)}" data-i="txq" aria-label="Search transactions"></div>
       ${pick('tx-cat', ui.txCat, cats, {c: 'txCat', title: 'Filter by category', style: 'flex:0 1 220px'})}
-      <button class="btn pri" data-a="newTx">${I.plus} New</button></div>
+      <button class="btn" data-a="pasteSms">📋 Paste SMS</button><button class="btn pri" data-a="newTx">${I.plus} New</button></div>
     <div class="views">${[['all', 'All'], ['expense', 'Expenses'], ['income', 'Income'], ['debt', 'Debt & cards']].map(([v, l]) => `<button class="${ui.txType === v ? 'on' : ''}" data-a="txType" data-v="${v}">${l}</button>`).join('')}</div>
     <div id="tx-list">${txListHTML()}</div>
   </section>`;
@@ -1173,6 +1173,58 @@ function vGuide() {
 /* ───────── modals ───────── */
 const mHead = (t, e) => `<div class="modal-h"><h2>${e ? `<span>${e}</span>` : ''}<span>${t}</span></h2><button class="ib" type="button" data-a="close" aria-label="Close">${I.x}</button></div>`;
 function newDraft(over) { return {type: 'expense', amount: '', date: today(), subId: subMap.has('s-groc') ? 's-groc' : state.subs.find(s => s.bucket !== 'income' && !s.sys)?.id || '', mode: 'UPI', desc: '', notes: '', debtId: state.debts[0]?.id || '', cardId: cards()[0]?.id || '', ...over}; }
+
+/* ───────── bank SMS ───────── */
+// Reads a copied bank or UPI message (Federal Bank and other common Indian formats) into a draft.
+const SMS_MON = {jan: 1, feb: 2, mar: 3, apr: 4, may: 5, jun: 6, jul: 7, aug: 8, sep: 9, oct: 10, nov: 11, dec: 12};
+function smsDate(s) {
+  const y4 = y => (y = +y) < 100 ? 2000 + y : y; let m, p;
+  if ((m = s.match(/\b(\d{4})-(\d{1,2})-(\d{1,2})\b/))) p = [+m[1], +m[2], +m[3]];
+  else if ((m = s.match(/\b(\d{1,2})([-\/.])(\d{1,2})\2(\d{2,4})\b/))) p = [y4(m[4]), +m[3], +m[1]];
+  else if ((m = s.match(/\b(\d{1,2})[- ]?([A-Za-z]{3})[a-z]*[-, ]*(\d{2,4})\b/)) && SMS_MON[m[2].toLowerCase()]) p = [y4(m[3]), SMS_MON[m[2].toLowerCase()], +m[1]];
+  if (!p) return today();
+  const d = new Date(p[0], p[1] - 1, p[2]);
+  if (d.getMonth() !== p[1] - 1 || d > new Date(Date.now() + 864e5)) return today();
+  return ymd(d);
+}
+function smsName(s, words) {
+  const stop = /(?= on \d| on [A-Z][a-z]{2}\b|\. |\.$| Ref\b| UPI\b| via\b| Avl\b| Bal\b| Info\b| \(| - |-Federal|,|$)/i;
+  const re = new RegExp(`\\b(?:${words})\\s+(?:VPA\\s+)?(.+?)${stop.source}`, 'gi');
+  for (const m of s.matchAll(re)) {
+    let n = m[1].trim().replace(/[.:;\-]+$/, '');
+    if (!n || /^(a\/?c|ac\b|acct|account|your|card|xx|\*)/i.test(n)) continue;
+    if (n.includes('@')) { n = n.split('@')[0]; n = n.charAt(0).toUpperCase() + n.slice(1); }
+    if (n === n.toUpperCase() && /[A-Z]/.test(n)) n = n.toLowerCase().replace(/\b\w/g, c => c.toUpperCase());
+    return n.slice(0, 40);
+  }
+  return '';
+}
+function parseSMS(raw) {
+  const s = String(raw || '').replace(/\s+/g, ' ').trim();
+  if (!s) return {err: 'Nothing to read yet. Copy the bank SMS first, then paste it here.'};
+  if (/\b(OTP|one[- ]time password|verification code)\b/i.test(s)) return {err: 'That looks like an OTP message, not a payment.'};
+  const am = s.match(/(?:Rs\.?|INR|₹)\s*([\d,]+(?:\.\d{1,2})?)/i), amount = am ? +am[1].replace(/,/g, '') : 0;
+  if (!(amount > 0)) return {err: 'Could not find an amount in that message.'};
+  const ci = s.search(/\b(credited|received|deposited|refund(ed)?)\b/i), di = s.search(/\b(debited|spent|paid|sent|withdrawn|purchase|debit)\b/i);
+  const type = ci >= 0 && (di < 0 || ci < di) ? 'income' : 'expense';
+  const desc = type === 'income' ? smsName(s, 'from|by') : smsName(s, 'to|at|towards');
+  let mode = 'UPI';
+  if (/\b(NEFT|IMPS|RTGS|net ?banking)\b/i.test(s)) mode = 'Net Banking';
+  else if (/\bATM\b|withdrawn/i.test(s)) mode = 'Cash';
+  else if (/credit card/i.test(s) && type === 'expense' && cards().length === 1) mode = 'card:' + cards()[0].id;
+  else if (/\b(debit )?card\b/i.test(s) && !/\bUPI\b/i.test(s)) mode = 'Debit Card';
+  const prev = desc && [...state.tx].sort((a, b) => b.ts - a.ts).find(t => t.type === type && t.desc && t.desc.toLowerCase() === desc.toLowerCase() && subMap.has(t.subId));
+  const subId = prev ? prev.subId : type === 'income' ? state.subs.find(x => x.bucket === 'income')?.id || '' : newDraft().subId;
+  return {type, amount, date: smsDate(s), desc, mode, subId, known: !!prev};
+}
+function openSmsDraft(r) { open({type: 'tx', sms: r.known ? 'known' : 'new', draft: newDraft({type: r.type, amount: String(r.amount), date: r.date, desc: r.desc, mode: r.mode, subId: r.subId})}); }
+function mSms() {
+  return `${mHead('Paste bank SMS', '📋')}<div class="modal-b">
+    <p class="small muted">Long-press the bank message, tap Copy, then paste it below.</p>
+    <textarea class="in" id="sms-text" rows="5" placeholder="e.g. Debited Rs 450.00 from a/c XX1234 on 26-10-2026 via UPI to SWIGGY" aria-label="Bank SMS" autofocus>${esc(modal.text || '')}</textarea>
+    ${modal.err ? `<div class="err">${esc(modal.err)}</div>` : ''}
+  </div><div class="modal-f"><button class="btn txt" type="button" data-a="close">Cancel</button><button class="btn pri lg" type="button" data-a="readSms">Read message</button></div>`;
+}
 function mTx() {
   const d = modal.draft, isDebt = d.type === 'debt', isAdv = d.type === 'advance', cs = cards();
   const modes = [...flat(MODES), ...(d.type === 'expense' ? cs.map(c => ({v: 'card:' + c.id, l: c.name, icon: '💳', g: 'Credit cards'})) : [])];
@@ -1182,6 +1234,7 @@ function mTx() {
     <div class="seg" role="tablist">${[['expense', 'Expense'], ['income', 'Income'], ['debt', 'Debt payment'], ['advance', 'Card cash']].map(([v, l]) => `<button type="button" class="${d.type === v ? 'on' : ''}" data-a="draftType" data-v="${v}">${l}</button>`).join('')}</div>
     <label class="fld"><span>Amount (${esc(sym())})</span><input class="in amount num" id="f-amount" name="amount" type="number" inputmode="decimal" min="0" step="any" placeholder="0" value="${esc(d.amount)}" autofocus></label>
     ${modal.err ? `<div class="err">${modal.err}</div>` : ''}
+    ${modal.sms && !d.id ? `<div class="callout"><span class="e">📋</span><div class="b"><div>${modal.sms === 'known' ? 'Read from your SMS. The category is the one you used last time for this merchant.' : 'Read from your SMS. Pick a category, check the details, then log it.'}</div></div></div>` : ''}
     <div class="fgrid">
       ${isAdv ? `<label class="fld"><span>Card</span>${pick('f-card', d.cardId, cs.length ? cs.map(c => ({v: c.id, l: c.name, icon: '💳'})) : [{v: '', l: 'Add a card first'}], {name: 'cardId', title: 'Card'})}</label>`
         : isDebt ? `<label class="fld"><span>Debt or card</span>${pick('f-debt', d.debtId, state.debts.length ? state.debts.map(x => ({v: x.id, l: x.name, icon: x.kind === 'Credit Card' ? '💳' : '🏦'})) : [{v: '', l: 'Add a debt first'}], {name: 'debtId', title: 'Debt or card'})}</label>`
@@ -1330,7 +1383,7 @@ function syncSettings(arm) {
     </ol></details>
   </form>`;
 }
-const MODALS = {tx: mTx, detail: mDetail, cats: mCats, presets: mPresets, auto: mAuto, debt: mDebt, settings: mSettings};
+const MODALS = {tx: mTx, sms: mSms, detail: mDetail, cats: mCats, presets: mPresets, auto: mAuto, debt: mDebt, settings: mSettings};
 const VIEWS = {overview: vOverview, transactions: vTransactions, budgets: vBudgets, debt: vDebt, guide: vGuide};
 
 /* ───────── render ───────── */
@@ -1390,6 +1443,13 @@ const A = {
   arm(el) { modal.arm = el.dataset.v || null; renderModal(true); },
   clearSample() { const old = JSON.stringify(state); Object.assign(state, {tx: [], debts: [], budgets: {}, extra: 0, sample: false}); commit(); toast('Sample data cleared', () => { state = JSON.parse(old); }); },
 
+  async pasteSms() {
+    let text = ''; try { text = await navigator.clipboard.readText(); } catch (e) {}
+    const r = text.trim() ? parseSMS(text) : null;
+    if (r && !r.err) return openSmsDraft(r);
+    open({type: 'sms', text, err: r ? r.err : ''});
+  },
+  readSms() { const v = $('#sms-text')?.value || '', r = parseSMS(v); if (r.err) { modal.text = v; modal.err = r.err; return renderModal(); } openSmsDraft(r); },
   newTx() { open({type: 'tx', draft: newDraft(ui.view === 'debt' && state.debts.length ? {type: 'debt'} : {})}); },
   editTx(el) { const t = state.tx.find(x => x.id === el.dataset.id); if (t) open({type: 'tx', draft: {...t, amount: String(t.amount), mode: t.type === 'expense' && t.cardId && cardOf(t.cardId) ? 'card:' + t.cardId : t.mode}, back: modal?.type === 'detail' ? modal : null}); },
   delTx(el) {
