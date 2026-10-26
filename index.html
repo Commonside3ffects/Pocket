@@ -252,7 +252,7 @@ textarea.in{resize:vertical;min-height:64px;font-family:var(--mono);font-size:12
 .tx-desc .n{color:var(--fg3);font-size:12.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0;flex:1}
 .tx-cat{min-width:0}
 .tx-amt{text-align:right;font-weight:500;white-space:nowrap}
-.tx-amt.income{color:var(--good)}
+.tx-amt.t-income{color:var(--good)}
 .tx-act{justify-self:end}
 .tx-act .ib{opacity:0}
 .tx:hover .tx-act .ib,.tx-act .ib:focus-visible{opacity:1}
@@ -612,7 +612,7 @@ textarea.in{border-radius:18px;font-family:var(--mono);font-size:13px}
 .tx-desc{align-items:center;gap:12px}
 .tx-desc .t{font-weight:600;font-size:15px}
 .tx-amt{font-weight:600;font-size:15px}
-.tx-amt.income{color:var(--good)}
+.tx-amt.t-income{color:var(--good)}
 .txs.byday{background:transparent;padding:0;overflow:visible;border-radius:0}
 .txs.byday .day-h{border:0;padding:14px 4px 6px;font-size:11.5px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--ink);background:transparent}
 .txs.byday .day-h .num{letter-spacing:0;text-transform:none;font-size:13.5px;font-weight:600}
@@ -1282,7 +1282,7 @@ function txRow(t) {
     <span class="tx-desc"><span class="ic">${adv ? tile('💳', 'red') : tile(m.icon, m.color)}</span><span class="t">${esc(t.desc || (adv ? 'Cash from ' + (card ? card.name : 'card') : s.name))}</span>${t.notes ? `<span class="n">${esc(t.notes)}</span>` : ''}</span>
     <span class="tx-cat">${adv ? '<span class="tag c-red">Card cash</span>' : `<span class="tag c-${m.color}">${esc(s.name)}</span>`}</span>
     <span class="tx-mode">${card ? (adv ? '' : glyph('💳', 13) + ' ') + esc(card.name) : esc(t.mode || '')}</span>
-    <span class="tx-amt num ${t.type}">${t.type === 'income' || adv ? '+' : '−'}${fmt(t.amount)}</span>
+    <span class="tx-amt num t-${t.type}">${t.type === 'income' || adv ? '+' : '−'}${fmt(t.amount)}</span>
     <span class="tx-act"><button class="ib" data-a="delTx" data-id="${t.id}" aria-label="Delete transaction">${I.trash}</button></span>
   </div>`;
 }
