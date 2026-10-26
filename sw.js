@@ -1,5 +1,5 @@
 // Offline cache for Pocket. Bump VERSION whenever you upload a new index.html.
-const VERSION = 'pocket-24';
+const VERSION = 'pocket-25';
 const FILES = ['./', 'index.html', 'manifest.webmanifest', 'icon.svg', 'icon-192.png', 'icon-512.png'];
 // cache: 'reload' skips the browser's own cache, so a new version never stores the old page.
 self.addEventListener('install', e => e.waitUntil(caches.open(VERSION).then(c => c.addAll(FILES.map(f => new Request(f, {cache: 'reload'})))).then(() => self.skipWaiting())));

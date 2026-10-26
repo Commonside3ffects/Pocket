@@ -715,6 +715,20 @@ textarea.in{border-radius:18px;font-family:var(--mono);font-size:13px}
 .lg-bar i{display:block;height:100%;border-radius:99px;background:var(--ts)}
 .lg-row .ict.sm{width:32px;height:32px;border-radius:10px}
 .lg-row .ict.sm .emo{font-size:16px!important}
+/* transactions toolbar, compact */
+.toggle{min-height:38px;padding:0 14px;border-radius:999px;font-weight:600;font-size:13.5px;color:var(--ink2);box-shadow:inset 0 0 0 1.5px var(--line2)}
+.toggle.on{background:var(--pill);color:var(--on-pill);box-shadow:none}
+.tools{flex-wrap:nowrap;gap:8px}
+.tools .search{flex:1 1 auto}
+.tools .sel.pick{flex:0 1 150px!important;min-width:0}
+.ib.sq{width:42px;height:42px;border-radius:14px;background:var(--card);color:var(--ink);flex:none}
+.sec:has(>.tools){gap:10px}
+@container (max-width:620px){
+  .txs.byday .tx{grid-template-columns:minmax(0,1fr) auto;grid-template-areas:"d a" "c a";row-gap:0;padding-block:8px}
+  .txs.byday .tx-cat{padding-left:48px;margin-top:-6px}
+  .txs.byday .tx-act{display:none}
+  .txs:not(.byday) .tx-act{display:none}
+}
 /* + button */
 .fab{width:54px;height:54px;background:var(--hot);color:#161616;border:2px solid var(--outline);box-shadow:0 4px 0 var(--lift);transition:transform .1s,box-shadow .1s}
 .fab:hover{background:var(--hot);transform:none}
@@ -1424,11 +1438,11 @@ function vTransactions() {
   const cats = [{v: '', l: 'All categories'}];
   for (const m of state.mains) { const g = m.name; cats.push({v: 'm:' + m.id, l: 'All of ' + m.name, g, icon: m.icon, color: m.color}); for (const x of state.subs) if (x.mainId === m.id) cats.push({v: 's:' + x.id, l: x.name, g, icon: m.icon, color: m.color}); }
   return `${titleHTML('transactions')}
-  <div class="rowline" style="justify-content:space-between">${ui.txAll ? '<b>All months</b>' : monthNav()}<label class="check"><input type="checkbox" id="tx-all" data-c="txAll"${ui.txAll ? ' checked' : ''}> Show all months</label></div>
+  <div class="rowline">${ui.txAll ? '' : monthNav()}<button class="toggle${ui.txAll ? ' on' : ''}" data-a="txAllT" aria-pressed="${ui.txAll}">All months</button></div>
   <section class="sec">
-    <div class="tools"><div class="search">${I.search}<input class="in" id="tx-q" type="search" placeholder="Search merchant, note, category" value="${esc(ui.txq)}" data-i="txq" aria-label="Search transactions"></div>
-      ${pick('tx-cat', ui.txCat, cats, {c: 'txCat', title: 'Filter by category', style: 'flex:0 1 220px'})}
-      <button class="btn" data-a="pasteSms">${glyph('📋')} Paste SMS</button><button class="btn pri" data-a="newTx">${I.plus} New</button></div>
+    <div class="tools"><div class="search">${I.search}<input class="in" id="tx-q" type="search" placeholder="Search" value="${esc(ui.txq)}" data-i="txq" aria-label="Search transactions"></div>
+      ${pick('tx-cat', ui.txCat, cats, {c: 'txCat', title: 'Filter by category', style: 'flex:0 1 200px'})}
+      <button class="ib sq" data-a="pasteSms" aria-label="Paste SMS" title="Paste SMS">${glyph('📋', 18)}</button></div>
     <div class="views">${[['all', 'All'], ['expense', 'Expenses'], ['income', 'Income'], ['debt', 'Debt & cards']].map(([v, l]) => `<button class="${ui.txType === v ? 'on' : ''}" data-a="txType" data-v="${v}">${l}</button>`).join('')}</div>
     <div id="tx-list">${txListHTML()}</div>
   </section>`;
@@ -2020,6 +2034,7 @@ const F = {
 };
 const C = {
   txAll(el) { ui.txAll = el.checked; render(); },
+  txAllT() { ui.txAll = !ui.txAll; render(); },
   debtKind(el) { snapDraft(); modal.draft.kind = el.value; modal.err = ''; renderModal(true); },
   txCat(el) { ui.txCat = el.value; render(); },
   limit(el) { const v = num(el.value); if (v > 0) state.budgets[el.dataset.id] = v; else delete state.budgets[el.dataset.id]; save(); softRender(); },
