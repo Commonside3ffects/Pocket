@@ -410,13 +410,13 @@ textarea.in{resize:vertical;min-height:64px;font-family:var(--mono);font-size:12
   .stat:nth-child(n+3){border-top:1px solid var(--line)}
   .cols{grid-template-columns:minmax(0,1fr)}
   .menu-scrim{background:var(--scrim)}
-  .menu{left:0;right:0;bottom:0;max-height:72dvh;border-radius:12px 12px 0 0;padding-bottom:env(safe-area-inset-bottom,0px)}
+  .menu{left:0;right:0;bottom:var(--kb,0px);max-height:min(72dvh,calc(var(--vvh,100dvh) - 48px));border-radius:12px 12px 0 0;padding-bottom:env(safe-area-inset-bottom,0px)}
   .menu-h{display:flex;align-items:center;justify-content:space-between;padding:12px 10px 4px 16px;font-weight:600;font-size:16px;flex:none}
   .menu-o{min-height:46px;font-size:15px;padding-inline:12px}
   .menu-g{padding-inline:12px}
   .menu-list.grid button{width:46px;height:46px;font-size:22px}
-  .scrim{padding:0;align-items:flex-end}
-  .modal,.modal.wide{max-width:none;border-radius:12px 12px 0 0;max-height:92dvh}
+  .scrim{padding:0 0 var(--kb,0px);align-items:flex-end}
+  .modal,.modal.wide{max-width:none;border-radius:12px 12px 0 0;max-height:min(92dvh,calc(var(--vvh,100dvh) - 24px))}
   .debt{grid-template-columns:22px minmax(0,1fr) minmax(0,1fr);grid-template-areas:"o n n" ". a b" ". c c"}
   .debt .ord{grid-area:o}.debt .nm{grid-area:n}.debt .k1{grid-area:a}.debt .k2{grid-area:b}.debt .acts{grid-area:c}
   .g-row{grid-template-columns:minmax(0,92px) minmax(0,1fr)}
@@ -1718,6 +1718,12 @@ document.addEventListener('keydown', e => {
   if (!typing && !modal && !menu && !e.metaKey && !e.ctrlKey && !e.altKey && e.key.toLowerCase() === 'n') { e.preventDefault(); A.newTx(); }
 });
 window.addEventListener('beforeinstallprompt', e => { e.preventDefault(); installEvt = e; if (modal?.type === 'settings') renderModal(true); });
+// Keep bottom sheets above the on-screen keyboard: --kb is how much of the screen it covers.
+if (window.visualViewport) {
+  const vv = visualViewport, r = document.documentElement.style;
+  const fit = () => { r.setProperty('--kb', Math.max(0, Math.round(innerHeight - vv.height - vv.offsetTop)) + 'px'); r.setProperty('--vvh', Math.round(vv.height) + 'px'); };
+  vv.addEventListener('resize', fit); vv.addEventListener('scroll', fit); fit();
+}
 if ($('link[rel="manifest"]') && 'serviceWorker' in navigator) {
   // When a newer version takes over, reload once so the update shows straight away.
   const hadSW = !!navigator.serviceWorker.controller; let reloaded = false;
