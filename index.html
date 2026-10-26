@@ -905,7 +905,7 @@ const I = {
   check: svg('<path d="M3.5 8.5l3 3 6-6.5"/>'),
   tag: svg('<path d="M2.5 8.3V2.5h5.8l5.2 5.2-5.8 5.8z"/><circle cx="5.4" cy="5.4" r=".9"/>')
 };
-const LOGO = '<svg viewBox="0 0 32 32" width="26" height="26" aria-hidden="true"><rect x="7" y="4.5" width="15" height="7" rx="1.5" fill="#7FD39A" stroke="currentColor" stroke-width="2"/><rect x="3" y="8" width="26" height="19" rx="5" fill="var(--card)" stroke="currentColor" stroke-width="2.2"/><rect x="20" y="14" width="9" height="7" rx="3.5" fill="#FF6B3D" stroke="currentColor" stroke-width="2"/></svg>';
+const LOGO = '<svg viewBox="0 0 32 32" width="26" height="26" aria-hidden="true"><rect x="7" y="4.5" width="15" height="7" rx="1.5" style="fill:color-mix(in srgb,var(--hot) 35%,var(--card))" stroke="currentColor" stroke-width="2"/><rect x="3" y="8" width="26" height="19" rx="5" fill="var(--card)" stroke="currentColor" stroke-width="2.2"/><rect x="20" y="14" width="9" height="7" rx="3.5" style="fill:var(--hot)" stroke="currentColor" stroke-width="2"/></svg>';
 
 /* ───────── helpers ───────── */
 const $ = (s, r = document) => r.querySelector(s);
