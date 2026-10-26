@@ -468,6 +468,7 @@ textarea.in{resize:vertical;min-height:64px;font-family:var(--mono);font-size:12
   --scr-overview:#151829; --scr-transactions:#151829; --scr-budgets:#151829; --scr-debt:#151829; --scr-guide:#151829;
   --line2:rgba(242,239,231,.2); --hover:rgba(242,239,231,.06); --active:rgba(242,239,231,.1);
   --accent:#EEF0FA; --accent-h:#fff; --on-accent:#151829; --accent-soft:rgba(242,239,231,.1); --scrim:rgba(0,0,0,.6);
+  --bg:var(--card); --side:var(--paper); --pop:var(--paper); --callout:var(--card); --field:var(--card);
   --shadow:0 10px 30px rgba(0,0,0,.5)}}
 :root[data-theme="dark"]{
   --ink:#EEF0FA; --ink2:#A3A8C3; --paper:#151829; --card:#20253D; --hair:#2C3150; --soft:rgba(238,240,250,.08);
@@ -476,6 +477,7 @@ textarea.in{resize:vertical;min-height:64px;font-family:var(--mono);font-size:12
   --scr-overview:#151829; --scr-transactions:#151829; --scr-budgets:#151829; --scr-debt:#151829; --scr-guide:#151829;
   --line2:rgba(242,239,231,.2); --hover:rgba(242,239,231,.06); --active:rgba(242,239,231,.1);
   --accent:#EEF0FA; --accent-h:#fff; --on-accent:#151829; --accent-soft:rgba(242,239,231,.1); --scrim:rgba(0,0,0,.6);
+  --bg:var(--card); --side:var(--paper); --pop:var(--paper); --callout:var(--card); --field:var(--card);
   --shadow:0 10px 30px rgba(0,0,0,.5)}
 html{background:var(--screen);transition:background-color .35s}
 html[data-view="transactions"]{--screen:var(--scr-transactions)}
@@ -524,7 +526,7 @@ textarea.in{border-radius:18px;font-family:var(--mono);font-size:13px}
 .search .in{padding-left:42px;border-radius:999px}
 .search svg{left:16px;color:var(--ink2)}
 .fld>span{font-size:13px;font-weight:600;color:var(--ink2)}
-.amount{font-size:34px;font-weight:600;letter-spacing:-.04em;min-height:62px;background:var(--hot);color:var(--on-hot);border-radius:24px;padding-inline:20px}
+.amount{font-size:26px;font-weight:600;letter-spacing:-.03em;min-height:50px;background:var(--hot);color:var(--on-hot);border-radius:18px;padding-inline:16px}
 .amount::placeholder{color:var(--on-hot);opacity:.55}
 .seg{background:var(--card);border-radius:999px;padding:5px;gap:4px}
 .seg button{border-radius:999px;min-height:32px;padding:0 12px;font-weight:600;color:var(--ink2)}
