@@ -543,10 +543,10 @@ const PAGES = [
   ['guide','📘','Money guide','Three ideas this app is built on, worked through with your own numbers.']
 ];
 const MAIN = PAGES.filter(p => p[0] !== 'guide');
-const CAT_V = 2;
+const CAT_V = 3;
 const DEF = [
   ['m-income','Income','💼','green','income',[['s-salary','Salary'],['s-freelance','Freelance'],['s-cashback','Cashback & Refunds'],['s-repaid','Repaid by Friends'],['s-invinc','Other Income']]],
-  ['m-housing','Housing & Living','🏠','brown','expense',[['s-rent','Rent','needs'],['s-util','Utilities','needs'],['s-net','Mobile & Internet','needs']]],
+  ['m-housing','Housing & Living','🏠','brown','expense',[['s-rent','Rent','needs'],['s-util','Utilities','needs'],['s-net','Mobile & Internet','needs'],['s-repair','Repairs & Maintenance','needs']]],
   ['m-transport','Transport','🚗','blue','expense',[['s-taxi','Taxi','needs'],['s-fuel','Fuel & Vehicle','needs'],['s-metro','Metro & Bus','needs']]],
   ['m-food','Food & Dining','🍽️','orange','expense',[['s-groc','Groceries','needs'],['s-dine','Eating Out','wants'],['s-delivery','Food Delivery','wants'],['s-coffee','Coffee & Snacks','wants']]],
   ['m-health','Health & Education','🩺','red','expense',[['s-doctor','Healthcare & Pharmacy','needs'],['s-insure','Insurance','needs'],['s-edu','Education','needs']]],
@@ -765,7 +765,12 @@ function normalize(o, migrate = true) {
   s.extra = Math.max(0, +s.extra || 0);
   s.del = s.del && typeof s.del === 'object' && !Array.isArray(s.del) ? s.del : {};
   s.catV = o.catV || 0;
-  if (migrate && s.catV < CAT_V) migrateCats(s);
+  if (migrate && s.catV < 2) migrateCats(s);
+  // v3 only adds Repairs & Maintenance, without touching anything you renamed.
+  if (migrate && s.catV < 3) {
+    if (!s.subs.some(x => x.id === 's-repair') && s.mains.some(m => m.id === 'm-housing')) { const i = s.subs.map(x => x.mainId).lastIndexOf('m-housing'); s.subs.splice(i + 1, 0, {id: 's-repair', mainId: 'm-housing', name: 'Repairs & Maintenance', bucket: 'needs', u: Date.now()}); }
+    s.catV = 3; s.metaU = Date.now();
+  }
   delete s.app; delete s.exportedAt;
   return s;
 }
