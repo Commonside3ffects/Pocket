@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<meta name="theme-color" content="#AFD8FF" id="tc">
+<meta name="theme-color" content="#E4DCF5" id="tc">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Pocket">
 <link rel="manifest" href="manifest.webmanifest">
@@ -448,22 +448,22 @@ textarea.in{resize:vertical;min-height:64px;font-family:var(--mono);font-size:12
 /* ───────── Theme: root-style. Each page is a full-colour screen, cream cards, big headlines,
    black pills, sticker tiles with an ink outline. At night everything goes warm charcoal. ───────── */
 :root{
-  --ink:#161616; --ink2:#56524A; --paper:#F3ECDD; --card:#FAF3E6; --hair:#E4D9C4; --soft:rgba(22,22,22,.07);
-  --pill:#161616; --on-pill:#F3ECDD; --pop-ink:#161616; --outline:#161616; --lift:#161616;
-  --hot:#FF6B3D; --good:#1E7A47; --warn:#9A6A12; --bad:#C8372A;
-  --scr-overview:#AFD8FF; --scr-transactions:#DCC8FF; --scr-budgets:#BFE8C9; --scr-debt:#FFD3B5; --scr-guide:#F3ECDD;
+  --ink:#1B1726; --ink2:#5A5668; --paper:#F4F1FA; --card:#FBFAFD; --hair:#E6E1F0; --soft:rgba(27,23,38,.06);
+  --pill:#1B1726; --on-pill:#FBFAFD; --pop-ink:#1B1726; --outline:#1B1726; --lift:#1B1726;
+  --hot:#7C5CFF; --on-hot:#FFFFFF; --good:#1E7A47; --warn:#9A6A12; --bad:#C8372A;
+  --scr-overview:#E4DCF5; --scr-transactions:#D7E3F4; --scr-budgets:#E9DDE6; --scr-debt:#DDE8E2; --scr-guide:#F4F1FA;
   --screen:var(--scr-overview);
   --bg:var(--card); --side:var(--paper); --pop:var(--paper); --callout:var(--card); --field:var(--card);
   --fg:var(--ink); --fg2:var(--ink2); --fg3:#7A7468;
   --line:var(--hair); --line2:rgba(22,22,22,.22); --hover:rgba(22,22,22,.06); --active:rgba(22,22,22,.1);
-  --accent:#161616; --accent-h:#000; --on-accent:#F3ECDD; --accent-soft:rgba(22,22,22,.08);
+  --accent:#1B1726; --accent-h:#000; --on-accent:#FBFAFD; --accent-soft:rgba(22,22,22,.08);
   --scrim:rgba(10,10,10,.55); --shadow:0 10px 30px rgba(0,0,0,.18);
   --font:"Instrument Sans","Segoe UI",system-ui,-apple-system,sans-serif,"Apple Color Emoji","Segoe UI Emoji";
   --mono:"JetBrains Mono",ui-monospace,Menlo,Consolas,monospace;
 }
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
   --ink:#F2EFE7; --ink2:#A8A498; --paper:#262624; --card:#30302D; --hair:#3B3A36; --soft:rgba(242,239,231,.08);
-  --pill:#F2EFE7; --on-pill:#161616; --outline:transparent; --lift:#0F0F0E;
+  --pill:#F2EFE7; --on-pill:#161616; --outline:transparent; --lift:#0F0F0E; --hot:#9B85FF; --on-hot:#161616;
   --good:#6FD39B; --warn:#E6B65C; --bad:#FF8A7A; --fg3:#8C887E;
   --scr-overview:#262624; --scr-transactions:#262624; --scr-budgets:#262624; --scr-debt:#262624; --scr-guide:#262624;
   --line2:rgba(242,239,231,.2); --hover:rgba(242,239,231,.06); --active:rgba(242,239,231,.1);
@@ -471,7 +471,7 @@ textarea.in{resize:vertical;min-height:64px;font-family:var(--mono);font-size:12
   --shadow:0 10px 30px rgba(0,0,0,.5)}}
 :root[data-theme="dark"]{
   --ink:#F2EFE7; --ink2:#A8A498; --paper:#262624; --card:#30302D; --hair:#3B3A36; --soft:rgba(242,239,231,.08);
-  --pill:#F2EFE7; --on-pill:#161616; --outline:transparent; --lift:#0F0F0E;
+  --pill:#F2EFE7; --on-pill:#161616; --outline:transparent; --lift:#0F0F0E; --hot:#9B85FF; --on-hot:#161616;
   --good:#6FD39B; --warn:#E6B65C; --bad:#FF8A7A; --fg3:#8C887E;
   --scr-overview:#262624; --scr-transactions:#262624; --scr-budgets:#262624; --scr-debt:#262624; --scr-guide:#262624;
   --line2:rgba(242,239,231,.2); --hover:rgba(242,239,231,.06); --active:rgba(242,239,231,.1);
@@ -524,8 +524,8 @@ textarea.in{border-radius:18px;font-family:var(--mono);font-size:13px}
 .search .in{padding-left:42px;border-radius:999px}
 .search svg{left:16px;color:var(--ink2)}
 .fld>span{font-size:13px;font-weight:600;color:var(--ink2)}
-.amount{font-size:34px;font-weight:600;letter-spacing:-.04em;min-height:62px;background:var(--hot);color:#161616;border-radius:24px;padding-inline:20px}
-.amount::placeholder{color:rgba(22,22,22,.45)}
+.amount{font-size:34px;font-weight:600;letter-spacing:-.04em;min-height:62px;background:var(--hot);color:var(--on-hot);border-radius:24px;padding-inline:20px}
+.amount::placeholder{color:var(--on-hot);opacity:.55}
 .seg{background:var(--card);border-radius:999px;padding:5px;gap:4px}
 .seg button{border-radius:999px;min-height:32px;padding:0 12px;font-weight:600;color:var(--ink2)}
 .seg button.on{background:var(--pill);color:var(--on-pill);box-shadow:none}
@@ -553,7 +553,7 @@ textarea.in{border-radius:18px;font-family:var(--mono);font-size:13px}
 .month{display:inline-flex;align-self:flex-start;align-items:center;gap:4px;background:var(--pill);color:var(--on-pill);border-radius:999px;padding:4px;flex-wrap:nowrap}
 .month b{min-width:0;padding:0 8px;font-size:14px;font-weight:600}
 .month .ib{width:30px;height:30px;background:var(--on-pill);color:var(--pill)}
-.month .ib:last-of-type{background:var(--hot);color:#161616}
+.month .ib:last-of-type{background:var(--hot);color:var(--on-hot)}
 .month .ib:hover{opacity:.85}
 .month .btn.txt{color:var(--on-pill);min-height:34px;font-size:13.5px}
 .rowline:has(>.month){justify-content:flex-start!important}
@@ -738,7 +738,7 @@ textarea.in{border-radius:18px;font-family:var(--mono);font-size:13px}
   .main{height:100%;overflow-y:auto;overscroll-behavior-y:contain}
 }
 /* + button */
-.fab{width:54px;height:54px;background:var(--hot);color:#161616;border:2px solid var(--outline);box-shadow:0 4px 0 var(--lift);transition:transform .1s,box-shadow .1s}
+.fab{width:54px;height:54px;background:var(--hot);color:var(--on-hot);border:2px solid var(--outline);box-shadow:0 4px 0 var(--lift);transition:transform .1s,box-shadow .1s}
 .fab:hover{background:var(--hot);transform:none}
 .fab:active{background:var(--hot);transform:translateY(3px);box-shadow:0 1px 0 var(--lift)}
 .fab svg{width:24px;height:24px;stroke-width:2.6}
@@ -1828,7 +1828,7 @@ function render() {
   index();
   const a = document.activeElement, fid = a && a.id && $('#view').contains(a) ? a.id : null;
   document.documentElement.dataset.view = ui.view;
-  const tc = document.getElementById('tc'); if (tc) tc.content = getComputedStyle(document.documentElement).getPropertyValue('--screen').trim() || '#AFD8FF';
+  const tc = document.getElementById('tc'); if (tc) tc.content = getComputedStyle(document.documentElement).getPropertyValue('--screen').trim() || '#E4DCF5';
   $('#side').innerHTML = sideHTML(); $('#top').innerHTML = topHTML(); $('#tabs').innerHTML = tabsHTML();
   $('#view').innerHTML = VIEWS[ui.view]();
   const sl = $('#slides'); if (sl) { sl.scrollLeft = ui.slide * sl.clientWidth; sl.addEventListener('scroll', () => { const i = Math.round(sl.scrollLeft / Math.max(1, sl.clientWidth)); if (i !== ui.slide) { ui.slide = i; sl.parentElement.querySelectorAll('.dots i').forEach((d, k) => d.classList.toggle('on', k === i)); } }, {passive: true}); }
