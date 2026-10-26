@@ -496,6 +496,7 @@ body{background:var(--screen);font-size:14px;transition:background-color .35s}
 .nav .e{font-size:18px}
 .side-label{font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;padding:16px 12px 6px}
 .top{background:var(--screen);min-height:54px;padding-inline:16px;transition:background-color .35s}
+.top::before{content:"";position:absolute;left:0;right:0;bottom:100%;height:env(safe-area-inset-top,0px);background:inherit}
 .crumb{font-size:15px}
 .crumb b{font-weight:600}
 .crumb .app-name b{font-size:20px;letter-spacing:-.03em}
