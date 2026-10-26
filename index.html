@@ -125,6 +125,7 @@ h1,h2,h3{text-wrap:balance}
 .ict.sm{width:20px;height:20px;border-radius:5px}
 .ict.lg{width:52px;height:52px;border-radius:12px}
 .isv{flex:none;vertical-align:-.18em}
+.emo{line-height:1;flex:none;display:inline-block}
 .menu-g{display:flex;align-items:center;gap:6px}
 .title h1{font-size:32px;line-height:1.2;font-weight:700;letter-spacing:-.01em}
 .title p{color:var(--fg2);max-width:62ch}
@@ -398,7 +399,8 @@ textarea.in{resize:vertical;min-height:64px;font-family:var(--mono);font-size:12
   .title .ico{font-size:36px}.title .ict.lg{width:44px;height:44px}.title h1{font-size:26px}
   .tabs{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));position:fixed;left:0;right:0;bottom:0;z-index:20;background:var(--bg);border-top:1px solid var(--line);padding:4px 4px calc(4px + env(safe-area-inset-bottom,0px))}
   .tabs button{display:flex;flex-direction:column;align-items:center;gap:1px;padding:5px 2px;border-radius:6px;color:var(--fg3);font-size:10.5px;font-weight:500;min-width:0}
-  .tabs button span:first-child{font-size:18px;line-height:1.2;opacity:.8}
+  .tabs button span:first-child{font-size:18px;line-height:1.2;filter:grayscale(1);opacity:.7}
+  .tabs button.on span:first-child{filter:none;opacity:1}
   .tabs button.on{color:var(--fg)}
   .tabs button.on span:first-child{filter:none;opacity:1}
   .fab{right:16px;bottom:calc(72px + env(safe-area-inset-bottom,0px))}
@@ -519,7 +521,9 @@ const ICON_SRC = {
 };
 const ICONS = Object.fromEntries(Object.entries(ICON_SRC).map(([k, v]) => [k.replace(/\uFE0F/g, ''), v]));
 // A stored emoji drawn as a line icon. Anything without a drawing falls back to the emoji itself.
-const glyph = (e, z = 16) => { const p = e && ICONS[String(e).replace(/\uFE0F/g, '')]; return p ? `<svg class="isv" viewBox="0 0 18 18" width="${z}" height="${z}" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${p}</svg>` : esc(e || ''); };
+// 'emoji' shows the stored emoji; 'line' draws the line icons above.
+const ICON_STYLE = 'emoji';
+const glyph = (e, z = 16) => { if (ICON_STYLE === 'emoji') return e ? `<span class="emo" style="font-size:${Math.round(z * .95)}px" aria-hidden="true">${esc(e)}</span>` : ''; const p = e && ICONS[String(e).replace(/\uFE0F/g, '')]; return p ? `<svg class="isv" viewBox="0 0 18 18" width="${z}" height="${z}" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${p}</svg>` : esc(e || ''); };
 const tile = (e, c = 'gray', k = '') => `<span class="ict c-${COLORS.includes(c) ? c : 'gray'}${k ? ' ' + k : ''}">${glyph(e, k === 'sm' ? 13 : k === 'lg' ? 28 : 16)}</span>`;
 const PAGE_COLOR = {overview: 'blue', transactions: 'orange', budgets: 'green', debt: 'red', guide: 'purple'};
 const MODES = ['UPI','Debit Card','Cash','Net Banking','Wallet'];
