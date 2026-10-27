@@ -1710,6 +1710,8 @@ function parseShot(raw) {
 }
 // Loads the on-device text reader (served from Pocket's own ocr/ folder) the first time it is needed; nothing leaves the phone.
 let ocrLib = null;
+// Remembers that the reader has run once on this device, so the first-time note stops showing.
+const ocrReady = () => { try { return localStorage.getItem('pocket-ocr-ready') === '1'; } catch (e) { return false; } };
 function loadOcr() {
   if (window.Tesseract) return Promise.resolve();
   return ocrLib ||= new Promise((ok, no) => { const sc = document.createElement('script'); sc.src = 'ocr/tesseract.min.js'; sc.onload = ok; sc.onerror = () => { ocrLib = null; no(); }; document.head.appendChild(sc); });
@@ -1734,7 +1736,7 @@ async function readShot(blob) {
     const w = await Tesseract.createWorker('eng', 1, {workerPath: at('worker.min.js'), corePath: at(simd ? 'tesseract-core-simd-lstm.wasm.js' : 'tesseract-core-lstm.wasm.js'), langPath: at('lang'), workerBlobURL: false}); text = (await w.recognize(cv)).data.text || '';
     // The big headline amount is often skipped; a sparse-text pass on a smaller copy picks it up.
     if (parseShot(text).err) { await w.setParameters({tessedit_pageseg_mode: '11'}); text += '\n' + ((await w.recognize(await prepImage(blob, 700))).data.text || ''); }
-    await w.terminate();
+    await w.terminate(); try { localStorage.setItem('pocket-ocr-ready', '1'); } catch (e) {}
   } catch (e) {
     if (modal?.type !== 'sms' || !modal.busy) return;
     return open({type: 'sms', text: '', err: navigator.onLine ? 'Could not read that image. Try a clearer screenshot.' : 'The screenshot reader downloads once (about 7 MB) the first time. Connect to the internet and try again.'});
@@ -1755,7 +1757,7 @@ async function takeShared() {
 }
 function openSmsDraft(r, from) { open({type: 'tx', sms: r.known ? 'known' : 'new', from: from || 'sms', draft: newDraft({type: r.type, amount: String(r.amount), date: r.date, desc: r.desc, mode: r.mode, subId: r.subId})}); }
 function mSms() {
-  if (modal.busy) return `${mHead('Drop in', '📋')}<div class="modal-b"><p class="muted" role="status" aria-live="polite">${esc(modal.busy)}</p><p class="small muted">The first time takes a little longer while the reader downloads.</p></div>`;
+  if (modal.busy) return `${mHead('Drop in', '📋')}<div class="modal-b"><p class="muted" role="status" aria-live="polite">${esc(modal.busy)}</p>${ocrReady() ? '' : '<p class="small muted">The first time takes a little longer while the reader downloads.</p>'}</div>`;
   return `${mHead('Drop in', '📋')}<div class="modal-b">
     <div class="setting"><div><b>Payment screenshot</b><small>A GPay or other UPI receipt. Read on this phone, nothing is uploaded. You can also Share a screenshot straight to Pocket.</small></div><label class="btn" for="shot-file" tabindex="0">${glyph('🖼️')}Choose image</label><input class="file" id="shot-file" type="file" accept="image/*" data-c="shotFile"></div>
     <p class="small muted">Or long-press the bank message, tap Copy, then paste it below.</p>
