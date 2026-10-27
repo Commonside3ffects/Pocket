@@ -1673,7 +1673,7 @@ function withCategory(r) {
 }
 
 /* ───────── payment screenshots ───────── */
-// Reads the text of a Google Pay (or similar UPI app) screenshot. The rupee sign often comes back as %, X, F, z or 2.
+// Reads the text of a Google Pay (or similar UPI app) screenshot. The rupee sign often comes back as R, %, X, F or z.
 function tidyName(n) {
   n = n.replace(/[^\w&.'\- ]+/g, ' ').replace(/\s+/g, ' ').trim();
   if (n.includes('@')) n = n.split('@')[0];
@@ -1684,7 +1684,7 @@ function parseShot(raw) {
   const lines = String(raw || '').split(/\n+/).map(l => l.trim()).filter(Boolean), all = lines.join(' ');
   if (!lines.length) return {err: 'Could not find any text in that image.'};
   let amount = 0;
-  const money = /^(?:₹|Rs\.?|INR|[%XxFfzZ=2]\s?)?\s*(\d{1,3}(?:,\d{2,3})*(?:\.\d{1,2})?|\d{1,7}(?:\.\d{1,2})?)$/;
+  const money = /^(?:₹|Rs\.?|INR|[%XxFfzZR=&]\s?)?\s*(\d{1,3}(?:,\d{2,3})*(?:\.\d{1,2})?|\d{1,7}(?:\.\d{1,2})?)$/;
   const sym = all.match(/(?:₹|Rs\.?|INR)\s*([\d,]+(?:\.\d{1,2})?)/i);
   if (sym) amount = +sym[1].replace(/,/g, '');
   else for (const l of lines) {
@@ -1708,15 +1708,15 @@ function parseShot(raw) {
   if (/credit card/i.test(all) && type === 'expense' && cards().length === 1) mode = 'card:' + cards()[0].id;
   return withCategory({type, amount, date: smsDate(all), desc, mode});
 }
-// Loads the on-device text reader the first time it is needed; nothing leaves the phone.
+// Loads the on-device text reader (served from Pocket's own ocr/ folder) the first time it is needed; nothing leaves the phone.
 let ocrLib = null;
 function loadOcr() {
   if (window.Tesseract) return Promise.resolve();
-  return ocrLib ||= new Promise((ok, no) => { const sc = document.createElement('script'); sc.src = 'https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js'; sc.onload = ok; sc.onerror = () => { ocrLib = null; no(); }; document.head.appendChild(sc); });
+  return ocrLib ||= new Promise((ok, no) => { const sc = document.createElement('script'); sc.src = 'ocr/tesseract.min.js'; sc.onload = ok; sc.onerror = () => { ocrLib = null; no(); }; document.head.appendChild(sc); });
 }
 // Grayscale, flip dark-mode screenshots to dark-on-light, and keep the width readable.
-async function prepImage(blob) {
-  const bmp = await createImageBitmap(blob), k = Math.min(1, 1400 / bmp.width), w = Math.round(bmp.width * k), h = Math.round(bmp.height * k);
+async function prepImage(blob, width = 1400) {
+  const bmp = await createImageBitmap(blob), k = Math.min(1, width / bmp.width), w = Math.round(bmp.width * k), h = Math.round(bmp.height * k);
   const cv = document.createElement('canvas'); cv.width = w; cv.height = h;
   const cx = cv.getContext('2d', {willReadFrequently: true}); cx.drawImage(bmp, 0, 0, w, h);
   const img = cx.getImageData(0, 0, w, h), d = img.data; let sum = 0;
@@ -1729,10 +1729,15 @@ async function readShot(blob) {
   let text = '';
   try {
     await loadOcr(); const cv = await prepImage(blob);
-    const w = await Tesseract.createWorker('eng'); text = (await w.recognize(cv)).data.text || ''; await w.terminate();
+    const at = f => new URL('ocr/' + f, location.href).href;
+    let simd = true; try { simd = WebAssembly.validate(new Uint8Array([0, 97, 115, 109, 1, 0, 0, 0, 1, 5, 1, 96, 0, 1, 123, 3, 2, 1, 0, 10, 10, 1, 8, 0, 65, 0, 253, 15, 253, 98, 11])); } catch (e) {}
+    const w = await Tesseract.createWorker('eng', 1, {workerPath: at('worker.min.js'), corePath: at(simd ? 'tesseract-core-simd-lstm.wasm.js' : 'tesseract-core-lstm.wasm.js'), langPath: at('lang'), workerBlobURL: false}); text = (await w.recognize(cv)).data.text || '';
+    // The big headline amount is often skipped; a sparse-text pass on a smaller copy picks it up.
+    if (parseShot(text).err) { await w.setParameters({tessedit_pageseg_mode: '11'}); text += '\n' + ((await w.recognize(await prepImage(blob, 700))).data.text || ''); }
+    await w.terminate();
   } catch (e) {
     if (modal?.type !== 'sms' || !modal.busy) return;
-    return open({type: 'sms', text: '', err: navigator.onLine ? 'Could not read that image. Try a clearer screenshot.' : 'The screenshot reader downloads once (about 5 MB) the first time. Connect to the internet and try again.'});
+    return open({type: 'sms', text: '', err: navigator.onLine ? 'Could not read that image. Try a clearer screenshot.' : 'The screenshot reader downloads once (about 7 MB) the first time. Connect to the internet and try again.'});
   }
   if (modal?.type !== 'sms' || !modal.busy) return; // closed while reading
   let r = parseShot(text); if (r.err) { const t = parseSMS(text); if (!t.err) r = t; }

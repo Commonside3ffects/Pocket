@@ -1,5 +1,5 @@
 // Offline cache for Pocket. Bump VERSION whenever you upload a new index.html.
-const VERSION = 'pocket-33';
+const VERSION = 'pocket-34';
 const FILES = ['./', 'index.html', 'manifest.webmanifest', 'icon.svg', 'icon-192.png', 'icon-512.png'];
 // cache: 'reload' skips the browser's own cache, so a new version never stores the old page.
 self.addEventListener('install', e => e.waitUntil(caches.open(VERSION).then(c => c.addAll(FILES.map(f => new Request(f, {cache: 'reload'})))).then(() => self.skipWaiting())));
@@ -22,8 +22,8 @@ self.addEventListener('fetch', e => {
   }
   if (req.method !== 'GET') return;
   const host = url.hostname;
-  // Screenshot reader (Tesseract): keep its files after the first use so it works offline.
-  if (host === 'cdn.jsdelivr.net' && /\/tesseract/.test(url.pathname) || host === 'tessdata.projectnaptha.com') {
+  // Screenshot reader (Tesseract, in ocr/): kept in its own cache after the first use so it works offline without re-downloading on every update.
+  if (url.origin === self.location.origin && /\/ocr\//.test(url.pathname)) {
     e.respondWith(caches.open('pocket-ocr').then(c => c.match(req).then(hit => hit || fetch(req).then(res => { if (res.ok) c.put(req, res.clone()); return res; }))));
     return;
   }
