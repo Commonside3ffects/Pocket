@@ -1663,14 +1663,97 @@ function parseSMS(raw) {
   else if (/\bATM\b|withdrawn/i.test(s)) mode = 'Cash';
   else if (/credit card/i.test(s) && type === 'expense' && cards().length === 1) mode = 'card:' + cards()[0].id;
   else if (/\b(debit )?card\b/i.test(s) && !/\bUPI\b/i.test(s)) mode = 'Debit Card';
-  const prev = desc && [...state.tx].sort((a, b) => b.ts - a.ts).find(t => t.type === type && t.desc && t.desc.toLowerCase() === desc.toLowerCase() && subMap.has(t.subId));
-  const subId = prev ? prev.subId : type === 'income' ? state.subs.find(x => x.bucket === 'income')?.id || '' : newDraft().subId;
-  return {type, amount, date: smsDate(s), desc, mode, subId, known: !!prev};
+  return withCategory({type, amount, date: smsDate(s), desc, mode});
 }
-function openSmsDraft(r) { open({type: 'tx', sms: r.known ? 'known' : 'new', draft: newDraft({type: r.type, amount: String(r.amount), date: r.date, desc: r.desc, mode: r.mode, subId: r.subId})}); }
+// Reuses the category from the last time this merchant or payer showed up.
+function withCategory(r) {
+  const prev = r.desc && [...state.tx].sort((a, b) => b.ts - a.ts).find(t => t.type === r.type && t.desc && t.desc.toLowerCase() === r.desc.toLowerCase() && subMap.has(t.subId));
+  const subId = prev ? prev.subId : r.type === 'income' ? state.subs.find(x => x.bucket === 'income')?.id || '' : newDraft().subId;
+  return {...r, subId, known: !!prev};
+}
+
+/* ───────── payment screenshots ───────── */
+// Reads the text of a Google Pay (or similar UPI app) screenshot. The rupee sign often comes back as %, X, F, z or 2.
+function tidyName(n) {
+  n = n.replace(/[^\w&.'\- ]+/g, ' ').replace(/\s+/g, ' ').trim();
+  if (n.includes('@')) n = n.split('@')[0];
+  if (n === n.toUpperCase() && /[A-Z]/.test(n)) n = n.toLowerCase().replace(/\b\w/g, c => c.toUpperCase());
+  return n.slice(0, 40);
+}
+function parseShot(raw) {
+  const lines = String(raw || '').split(/\n+/).map(l => l.trim()).filter(Boolean), all = lines.join(' ');
+  if (!lines.length) return {err: 'Could not find any text in that image.'};
+  let amount = 0;
+  const money = /^(?:₹|Rs\.?|INR|[%XxFfzZ=2]\s?)?\s*(\d{1,3}(?:,\d{2,3})*(?:\.\d{1,2})?|\d{1,7}(?:\.\d{1,2})?)$/;
+  const sym = all.match(/(?:₹|Rs\.?|INR)\s*([\d,]+(?:\.\d{1,2})?)/i);
+  if (sym) amount = +sym[1].replace(/,/g, '');
+  else for (const l of lines) {
+    const m = l.replace(/\s+/g, '').match(money); if (!m) continue;
+    let v = m[1].replace(/,/g, '');
+    if (+v > 0 && !/^(19|20)\d\d$/.test(v)) { amount = +v; break; }
+  }
+  if (!(amount > 0)) return {err: 'Could not find an amount in that screenshot.'};
+  // Whichever heading comes first wins: "To Swiggy" on a payment, "From Rahul" on money received.
+  const toAt = lines.findIndex(l => /^(paid to|sent to|payment to|to)\b/i.test(l)), fromAt = lines.findIndex(l => /^(received from|from)\b/i.test(l));
+  const inc = /\b(paid to|sent to|payment to|debited)\b/i.test(all) ? false : /\b(received from|credited|you got)\b/i.test(all) || fromAt >= 0 && (toAt < 0 || fromAt < toAt);
+  const type = inc ? 'income' : 'expense';
+  let desc = '';
+  // The name sits after the heading, or on the next line when the heading stands alone ("Paid to" / "Zepto").
+  const pick = heads => { const re = new RegExp(`^(?:${heads}):?(?:\\s+(.+))?$`, 'i');
+    for (let i = 0; i < lines.length; i++) { const m = lines[i].match(re); if (!m) continue; const n = (m[1] || lines[i + 1] || '').trim();
+      if (n && !/^(your|a\/c|account|bank|xx|[\d₹%])/i.test(n)) return tidyName(n); } return ''; };
+  desc = type === 'income' ? pick('received from|from') : pick('paid to|sent to|payment to|to');
+  if (!desc) { const r = parseSMS(all); if (!r.err && r.desc) desc = r.desc; }
+  let mode = 'UPI';
+  if (/credit card/i.test(all) && type === 'expense' && cards().length === 1) mode = 'card:' + cards()[0].id;
+  return withCategory({type, amount, date: smsDate(all), desc, mode});
+}
+// Loads the on-device text reader the first time it is needed; nothing leaves the phone.
+let ocrLib = null;
+function loadOcr() {
+  if (window.Tesseract) return Promise.resolve();
+  return ocrLib ||= new Promise((ok, no) => { const sc = document.createElement('script'); sc.src = 'https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js'; sc.onload = ok; sc.onerror = () => { ocrLib = null; no(); }; document.head.appendChild(sc); });
+}
+// Grayscale, flip dark-mode screenshots to dark-on-light, and keep the width readable.
+async function prepImage(blob) {
+  const bmp = await createImageBitmap(blob), k = Math.min(1, 1400 / bmp.width), w = Math.round(bmp.width * k), h = Math.round(bmp.height * k);
+  const cv = document.createElement('canvas'); cv.width = w; cv.height = h;
+  const cx = cv.getContext('2d', {willReadFrequently: true}); cx.drawImage(bmp, 0, 0, w, h);
+  const img = cx.getImageData(0, 0, w, h), d = img.data; let sum = 0;
+  for (let i = 0; i < d.length; i += 4) { const g = d[i] * .299 + d[i + 1] * .587 + d[i + 2] * .114; d[i] = d[i + 1] = d[i + 2] = g; sum += g; }
+  if (sum / (d.length / 4) < 128) for (let i = 0; i < d.length; i += 4) d[i] = d[i + 1] = d[i + 2] = 255 - d[i];
+  cx.putImageData(img, 0, 0); return cv;
+}
+async function readShot(blob) {
+  open({type: 'sms', busy: 'Reading the screenshot…', text: '', err: ''});
+  let text = '';
+  try {
+    await loadOcr(); const cv = await prepImage(blob);
+    const w = await Tesseract.createWorker('eng'); text = (await w.recognize(cv)).data.text || ''; await w.terminate();
+  } catch (e) {
+    if (modal?.type !== 'sms' || !modal.busy) return;
+    return open({type: 'sms', text: '', err: navigator.onLine ? 'Could not read that image. Try a clearer screenshot.' : 'The screenshot reader downloads once (about 5 MB) the first time. Connect to the internet and try again.'});
+  }
+  if (modal?.type !== 'sms' || !modal.busy) return; // closed while reading
+  let r = parseShot(text); if (r.err) { const t = parseSMS(text); if (!t.err) r = t; }
+  if (!r.err) return openSmsDraft(r, 'shot');
+  open({type: 'sms', text: text.trim(), err: r.err + ' Fix the text below and tap Read.'});
+}
+async function takeShared() {
+  if (!new URLSearchParams(location.search).has('shared')) return;
+  try { history.replaceState(null, '', location.pathname + location.hash); } catch (e) {}
+  if (!('caches' in window)) return;
+  const c = await caches.open('pocket-share'), img = await c.match('shared-image'), txt = await c.match('shared-text');
+  await c.delete('shared-image'); await c.delete('shared-text');
+  if (img) return readShot(await img.blob());
+  if (txt) { const text = await txt.text(), r = parseSMS(text); if (!r.err) return openSmsDraft(r); open({type: 'sms', text, err: r.err}); }
+}
+function openSmsDraft(r, from) { open({type: 'tx', sms: r.known ? 'known' : 'new', from: from || 'sms', draft: newDraft({type: r.type, amount: String(r.amount), date: r.date, desc: r.desc, mode: r.mode, subId: r.subId})}); }
 function mSms() {
+  if (modal.busy) return `${mHead('Drop in', '📋')}<div class="modal-b"><p class="muted" role="status" aria-live="polite">${esc(modal.busy)}</p><p class="small muted">The first time takes a little longer while the reader downloads.</p></div>`;
   return `${mHead('Drop in', '📋')}<div class="modal-b">
-    <p class="small muted">Long-press the bank message, tap Copy, then paste it below.</p>
+    <div class="setting"><div><b>Payment screenshot</b><small>A GPay or other UPI receipt. Read on this phone, nothing is uploaded. You can also Share a screenshot straight to Pocket.</small></div><label class="btn" for="shot-file" tabindex="0">${glyph('🖼️')}Choose image</label><input class="file" id="shot-file" type="file" accept="image/*" data-c="shotFile"></div>
+    <p class="small muted">Or long-press the bank message, tap Copy, then paste it below.</p>
     <textarea class="in" id="sms-text" rows="5" placeholder="e.g. Debited Rs 450.00 from a/c XX1234 on 26-10-2026 via UPI to SWIGGY" aria-label="Bank SMS" autofocus>${esc(modal.text || '')}</textarea>
     ${modal.err ? `<div class="err">${esc(modal.err)}</div>` : ''}
   </div><div class="modal-f"><button class="btn txt" type="button" data-a="close">Cancel</button><button class="btn pri lg" type="button" data-a="readSms">Read message</button></div>`;
@@ -1684,7 +1767,7 @@ function mTx() {
     <div class="seg" role="tablist">${[['expense', 'Expense'], ['income', 'Income'], ['debt', 'Debt payment'], ['advance', 'Card cash']].map(([v, l]) => `<button type="button" class="${d.type === v ? 'on' : ''}" data-a="draftType" data-v="${v}">${l}</button>`).join('')}</div>
     <label class="fld"><span>Amount (${esc(sym())})</span><input class="in amount num" id="f-amount" name="amount" type="number" inputmode="decimal" min="0" step="any" placeholder="0" value="${esc(d.amount)}" autofocus></label>
     ${modal.err ? `<div class="err">${modal.err}</div>` : ''}
-    ${modal.sms && !d.id ? `<div class="callout"><span class="e">${glyph('📋', 18)}</span><div class="b"><div>${modal.sms === 'known' ? 'Read from your SMS. The category is the one you used last time for this merchant.' : 'Read from your SMS. Pick a category, check the details, then log it.'}</div></div></div>` : ''}
+    ${modal.sms && !d.id ? `<div class="callout"><span class="e">${glyph('📋', 18)}</span><div class="b"><div>${modal.from === 'shot' ? 'Read from your screenshot.' : 'Read from your SMS.'} ${modal.sms === 'known' ? 'The category is the one you used last time for this merchant.' : 'Pick a category, check the details, then log it.'}</div></div></div>` : ''}
     <div class="fgrid">
       ${isAdv ? `<label class="fld"><span>Card</span>${pick('f-card', d.cardId, cs.length ? cs.map(c => ({v: c.id, l: c.name, icon: '💳'})) : [{v: '', l: 'Add a card first'}], {name: 'cardId', title: 'Card'})}</label>`
         : isDebt ? `<label class="fld"><span>Debt or card</span>${pick('f-debt', d.debtId, state.debts.length ? state.debts.map(x => ({v: x.id, l: x.name, icon: x.kind === 'Credit Card' ? '💳' : '🏦'})) : [{v: '', l: 'Add a debt first'}], {name: 'debtId', title: 'Debt or card'})}</label>`
@@ -2064,6 +2147,7 @@ const C = {
   currency(el) { state.settings.currency = el.value; commit(); },
   subBucket(el) { const s = subMap.get(el.dataset.id); if (s) { s.bucket = el.value; commit(); } },
   preset(el) { const p = state.presets.find(x => x.id === el.dataset.id); if (!p) return; const k = el.dataset.k; p[k] = k === 'amount' ? Math.max(0, num(el.value)) : k === 'label' ? el.value.trim() || 'Preset' : el.value; save(); render(); if (k === 'icon') renderModal(true); },
+  shotFile(el) { const f = el.files?.[0]; if (f) readShot(f); },
   importFile(el) { const f = el.files?.[0]; if (!f) return; const r = new FileReader(); r.onload = () => checkBackup(String(r.result)); r.onerror = () => { modal.err = 'Could not read that file. Try again.'; renderModal(true); }; r.readAsText(f); }
 };
 const N = {
@@ -2114,6 +2198,7 @@ document.addEventListener('visibilitychange', () => {
 const h = (location.hash || '').slice(1); if (VIEWS[h]) ui.view = h;
 applyTheme(); render();
 if (sync) syncNow();
+takeShared();
 })();
 </script>
 </body>
